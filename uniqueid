@@ -3001,7 +3001,7 @@ sub get_form_options
 					foreach my $label (sort keys %{$other[0]}) {
 						my $key = $other[0]{$label};
 						my $sel = ($key eq $value) ? ' checked' : '';
-						$ret .= qq(<input type="radio" name="$name" value="$key"$sel> $label<br>);
+						$ret .= qq(<label><input type="radio" name="$name" value="$key"$sel> $label</label><br>);
 					}
 				} else {
 					$ret .= qq(<select name="$name">\n);
