@@ -1,0 +1,22 @@
+- Allow each algorithm to implement describe_params?
+
+- Make UI interface more generic
+
+	- Add command line interface
+	
+	- Add Tk interface
+
+- New input types:
+
+	- Sublist (contains other items, will be indented)
+
+	- Allow radio boxes to have different labels from values
+
+	- Drop list support
+
+	- Text (??)
+		- Perhaps an "Extended text field" for all fields?
+
+- Add preliminary New Jersey support
+
+- Add New York pre-1992 support
