@@ -818,12 +818,9 @@ sub process
 	my $dl = main::soundex($last).'-'.
 		main::dlfirstmiddle_encode($first, $middle).
 		$YearTens.'-'.$YearOnes.
-		month_day_gender($mm, $dd, $gender).'-??';
+		month_day_gender($mm, $dd, $gender);
 	
-	$output = main::format_key_value("Driver's License Number", $dl).
-	"The last two digits cannot be determined.  They represent the ".
-	"number of people who have the exact same license number as you ".
-	"(excepting the last two digits), when you got your license.";
+	$output = main::format_key_value("Driver's License Number", $dl);
 	
 
 
@@ -874,7 +871,7 @@ sub describe {
 Given a Illinois Driver's License number, determine it's owner's
 identity.
 <STRONG>This is a work in progress and is not yet complete.</STRONG>
-<A HREF="http://www.highprogrammer.com/alan/numbers/dl_wi/">How it works</A>.
+<A HREF="http://www.highprogrammer.com/alan/numbers/dl_il/">How it works</A>.
 <A HREF="$link/dl_il">Create a fictional number to test</A>.
 _EODESC
 #'
@@ -883,7 +880,7 @@ _EODESC
 sub options
 {
 	return(
-		["Illinois Driver's License Number", 'l', 'text', 17],
+		["Illinois Driver's License Number", 'l', 'text', 14],
 	);
 }
 
@@ -895,12 +892,12 @@ sub process
 	my(%error_fields, $error_explain, $output);
 	
 
-	my($last, $first_middle, $year_ten, $year_one, $day_month, $count) =
-		($lic =~ /([A-Za-z]\d\d\d)-(\d\d\d)(\d)-(\d)(\d\d\d)-(..)/);
+	my($last, $first_middle, $year_ten, $year_one, $day_month) =
+		($lic =~ /([A-Za-z]\d\d\d)-(\d\d\d)(\d)-(\d)(\d\d\d)/);
 	if(not defined $day_month) {
 		$error_fields{'l'} .=
 		"Please specify an Illinois Driver's License number. It will look ".
-		'like "S530-4615-0244-03".';
+		'like "S530-4615-0244".';
 	}
 
 	if((defined $error_explain and length $error_explain) or
