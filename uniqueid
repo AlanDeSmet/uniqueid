@@ -42,6 +42,9 @@ use CGI qw(param);
 use Text::Soundex;
 use strict;
 
+my $PROGRAM_NAME = 'Unique ID';
+my $VERSION = '0.2.0';
+
 #===============================================================================
 my(%DLFMR_FIRST_MALE) = (
 	20=>['Albert'], 40=>['Arthur'], 80=>['Bernard'], 120=>['Carl'],
@@ -513,7 +516,7 @@ sub uid {
 sub display_name {
 	my $self = shift;
 	my $long = $self->state_long();
-	return "$long Driver's License Calculator"
+	return "Driver's License Calculator: $long"
 }
 sub describe_more { "" }
 
@@ -528,23 +531,50 @@ sub describe {
 Calculate your $state Driver's License number from your
 information.
 <A HREF="http://www.highprogrammer.com/alan/numbers/dl_us_shared.html">How it works</A>.
-<A HREF="$link/dl_$state_short_r">Reverse analyze an exististing number</A>.
+<A HREF="$link/dl_$state_short_r">Reverse analyze an existing number</A>.
 $describe_more
 _EODESC
 }
 
 sub options
 {
-	return(
-		['Last Name', 'last', 'text', 40],
-		['First Name', 'first', 'text', 40],
-		['Middle Initial', 'middle', 'text', 1],
-		['Gender', 'gender', 'radio', ['M', 'F'] ],
-		['Date of Birth'],
-		[' Year', 'y', 'text', 4],
-		[' Month', 'm', 'text', 2],
-		[' Day', 'd', 'text', 2],
-	);
+	my($self) = shift;
+	my @options;
+	push @options, ['Last Name', 'last', 'text', 40]
+		if $self->need_last_name();
+	push @options, ['First Name', 'first', 'text', 40]
+		if $self->need_first_name();
+	push @options, ['Middle Initial', 'middle', 'text', 1]
+		if $self->need_middle_initial();
+	push @options, ['Gender', 'gender', 'radio', ['M', 'F'] ]
+		if $self->need_gender();
+	push @options, ['Date of Birth']
+		if $self->need_dob_year() or $self->need_dob_month() or $self->need_dob_day() ;
+	push @options, [' Year', 'y', 'text', 4]
+		if $self->need_dob_year();
+	push @options, [' Month', 'm', 'text', 2]
+		if $self->need_dob_month();
+	push @options, [' Day', 'd', 'text', 2]
+		if $self->need_dob_day();
+	return @options;
+}
+
+sub need_last_name { return 1; }
+sub need_first_name { return 1; }
+sub need_middle_initial { return 1; }
+sub need_gender { return 1; }
+sub need_dob_year { return 1; }
+sub need_dob_month { return 1; }
+sub need_dob_day { return 1; }
+
+sub trim_edge_whitespace {
+	my($in) = @_;
+	if(not defined $in) {
+		return undef;
+	}
+	$in =~ s/^\s*//;
+	$in =~ s/\s*$//;
+	return $in;
 }
 
 sub process
@@ -563,25 +593,40 @@ sub process
 	($error_explain, %error_fields) =
 		main::validate_options(\%params, [$self->options()]);
 
-	$yy -= 1900 if $yy >= 1900 and $yy < 2000;
-	$yy -= 2000 if $yy >= 2000 and $yy < 2100;
+	$last = trim_edge_whitespace($last);
+	$middle = trim_edge_whitespace($middle);
+	$first = trim_edge_whitespace($first);
 
-	if($yy > 99 or $yy < 0) {
-		$error_fields{'y'} .= 'Please specify year of birth as a one or '.
-			'two digit number. '.
-			'For example, for 1975 specify "75", for 2006 specify "6".';
+	if($self->need_dob_year()) {
+		$yy -= 1900 if $yy >= 1900 and $yy < 2000;
+		$yy -= 2000 if $yy >= 2000 and $yy < 2100;
+
+		if($yy > 99 or $yy < 0) {
+			$error_fields{'y'} .= 'Please specify year of birth as a one or '.
+				'two digit number. '.
+				'For example, for 1975 specify "75", for 2006 specify "6".';
+		}
 	}
-	if($mm > 12 or $mm < 1) {
-		$error_fields{'m'} .= 'Please specify month of birth as a '.
-			'number from 1 to 12. '.
-			'For example, for January specify "1", for December specify "12".';
+
+	if($self->need_dob_month()) {
+		if($mm > 12 or $mm < 1) {
+			$error_fields{'m'} .= 'Please specify month of birth as a '.
+				'number from 1 to 12. '.
+				'For example, for January specify "1", for December specify "12".';
+		}
 	}
-	if($dd > 31 or $dd < 1) {
-		$error_fields{'d'} .= 'Please specify day of birth as a '.
-			'number from 1 to 31.';
+
+	if($self->need_dob_day()) {
+		if($dd > 31 or $dd < 1) {
+			$error_fields{'d'} .= 'Please specify day of birth as a '.
+				'number from 1 to 31.';
+		}
 	}
-	if($gender ne 'M' and $gender ne 'F') {
-		$error_fields{'gender'} .= 'Please specify gender (M or F)';
+
+	if($self->need_gender()) {
+		if($gender ne 'M' and $gender ne 'F') {
+			$error_fields{'gender'} .= 'Please specify gender (M or F)';
+		}
 	}
 	
 	if((defined $error_explain and length $error_explain) or
@@ -589,21 +634,26 @@ sub process
 		return(\%error_fields, $error_explain, $output);
 	}
 
+	my $dl = $self->encode_drivers_license
+		($last, $first, $middle, $gender, $yy, $mm, $dd);
+
+	$output = main::format_key_value("Driver's License Number", $dl).
+		$self->result_notes();
+
+	return(\%error_fields, $error_explain, $output);
+}
+
+sub encode_drivers_license {
+	my $self = shift;
+	my($last, $first, $middle, $gender, $yy, $mm, $dd) = @_;
 	$middle = substr $middle, 0, 1;
 	my($YearTens, $YearOnes) = split(//,sprintf("%02d",$yy));
-
 	my $dl = $self->format_license(
 		main::soundex($last),
 		dlfirstmiddle_encode($first, $middle),
 		$YearTens, $YearOnes,
 		$self->month_day_gender($mm, $dd, $gender));
-	
-	$output = main::format_key_value("Driver's License Number", $dl).
-	$self->result_notes();
-	
-
-
-	return(\%error_fields, $error_explain, $output);
+	return $dl;
 }
 
 sub month_day_gender
@@ -662,7 +712,7 @@ sub uid {
 sub display_name {
 	my $self = shift;
 	my $long = $self->state_long();
-	return "$long Driver's License Analyzer"
+	return "Driver's License Analyzer: $long"
 }
 
 sub options
@@ -809,7 +859,7 @@ sub format_license {
 sub result_notes {
 	"The last two digits cannot be determined.  They represent the ".
 	"number of people who have the exact same license number as you ".
-	"(excepting the last two digits), when you got your license." }
+	"(excepting the last two digits) when you got your license." }
 
 
 
@@ -1016,6 +1066,177 @@ _EODESC
 #'
 }
 
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+
+
+package UniqueID::DriversLicense::Washington;
+@UniqueID::DriversLicense::Washington::ISA = ( "UniqueID::DriversLicense::USShared" );
+
+
+sub new {
+	my $class = shift;
+	$class = ref($class) if ref($class);
+
+	bless my $self = {}, $class;
+
+	return $self;
+}
+
+sub state_long { 'Washington' }
+sub state_short { 'wa' }
+sub result_notes { <<ENDIT
+
+This is preliminary work.  Question marks indicate things that I don't yet
+know.  I don't know how to handle last names shorter than 5 letters, and I know
+nothing about the last three digits.
+If you can offer any suggestions,
+<a href=\"http://www.highprogrammer.com/alan/email.html\">please contact me</a>.
+Also, given some last names, birthdays, and driver's license numbers, I can
+probably figure out what it going on.
+<a href=\"http://www.highprogrammer.com/alan/email.html\">Please contact me</a> if you're willing to help me in this way.
+
+ENDIT
+}
+sub describe_more { <<ENDIT
+
+<strong>This is preliminary work.
+If you can offer any suggestions,
+<a href=\"http://www.highprogrammer.com/alan/email.html\">please contact me</a>.
+Also, given some last names, birthdays, and driver's license numbers, I can
+probably figure out what it going on.
+<a href=\"http://www.highprogrammer.com/alan/email.html\">Please contact me</a> if you're willing to help me in this way.
+</strong>
+
+ENDIT
+}
+
+sub need_last_name { return 1; }
+sub need_first_name { return 1; }
+sub need_middle_initial { return 1; }
+sub need_gender { return 0; }
+sub need_dob_year { return 1; }
+sub need_dob_month { return 0; }
+sub need_dob_day { return 0; }
+
+sub toupper {
+		return "\U@_";
+}
+
+sub encode_drivers_license {
+	my $self = shift;
+	my($last, $first, $middle, $gender, $yy, $mm, $dd) = @_;
+	$last = toupper(substr $last."????", 0, 5);
+	$middle = toupper(substr $middle, 0, 1);
+	$first = toupper(substr $first, 0, 1);
+	$yy = sprintf("%02d",$yy);
+	return "$last$first$middle$yy???";
+}
+
+sub describe {
+	my $self = shift;
+	my($link) = main::path_to_script();
+	my $state = $self->state_long();
+	my $state_short = $self->state_short();
+	my $state_short_r = $state_short.'r';
+	my $describe_more = $self->describe_more();
+#<A HREF="http://www.highprogrammer.com/alan/numbers/dl_us_shared.html">How it works</A>.
+#<A HREF="$link/dl_$state_short_r">Reverse analyze an existing number</A>.
+	return <<_EODESC;
+Calculate your $state Driver's License number from your
+information.
+$describe_more
+_EODESC
+}
+
+
+
+
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+
+
+package UniqueID::DriversLicense::NewHampshire;
+@UniqueID::DriversLicense::NewHampshire::ISA = ( "UniqueID::DriversLicense::USShared" );
+
+# Thanks to "RGM" who sent me a description of New Hampshire's system.
+
+
+sub new {
+	my $class = shift;
+	$class = ref($class) if ref($class);
+
+	bless my $self = {}, $class;
+
+	return $self;
+}
+
+sub state_long { 'New Hampshire' }
+sub state_short { 'nh' }
+sub result_notes { <<ENDIT
+
+This is preliminary work.
+<a href=\"http://www.highprogrammer.com/alan/email.html\">Let me know</a> if you find
+problems.
+
+The last digit cannot be determined.  It represents the
+number of people who have the exact same license number as you
+(excepting the last digit) when you got your license.
+
+ENDIT
+}
+sub describe_more { <<ENDIT
+
+<strong>This is preliminary work.</strong>
+
+ENDIT
+}
+
+#sub need_last_name { return 1; }
+#sub need_first_name { return 1; }
+sub need_middle_initial { return 0; }
+sub need_gender { return 0; }
+#sub need_dob_year { return 1; }
+#sub need_dob_month { return 1; }
+#sub need_dob_day { return 1; }
+
+sub toupper {
+		return "\U@_";
+}
+
+sub encode_drivers_license {
+	my $self = shift;
+	my($last, $first, $middle, $gender, $yy, $mm, $dd) = @_;
+	my $lastfirst = toupper(substr $last, 0, 1);
+	my $lastlast = toupper(substr $last, -1);
+	$first = toupper(substr $first, 0, 1);
+	return sprintf("%02d%s%s%s%02d%02d?",
+		$mm, $lastfirst, $lastlast, $first, $yy, $dd);
+}
+
+sub describe {
+	my $self = shift;
+	my($link) = main::path_to_script();
+	my $state = $self->state_long();
+	my $state_short = $self->state_short();
+	my $state_short_r = $state_short.'r';
+	my $describe_more = $self->describe_more();
+#<A HREF="http://www.highprogrammer.com/alan/numbers/dl_us_shared.html">How it works</A>.
+#<A HREF="$link/dl_$state_short_r">Reverse analyze an existing number</A>.
+	return <<_EODESC;
+Calculate your $state Driver's License number from your
+information.
+$describe_more
+_EODESC
+}
+
+
+
+
 
 
 ################################################################################
@@ -1040,6 +1261,8 @@ add_category(UniqueID::DriversLicense::Illinois->new());
 add_category(UniqueID::DriversLicense::IllinoisReverse->new());
 add_category(UniqueID::DriversLicense::Florida->new());
 add_category(UniqueID::DriversLicense::FloridaReverse->new());
+add_category(UniqueID::DriversLicense::Washington->new());
+add_category(UniqueID::DriversLicense::NewHampshire->new());
 add_category(UniqueID::Coding::DLFirstMiddle->new());
 
 
@@ -1113,7 +1336,10 @@ sub describe_params {
 	my $ret = '';
 	foreach my $option (@options) {
 		my($label, $name, $type, @other) = @{$option};
-		my $val = $params{$name} || '';
+		my $val = '';
+		if(defined $name) {
+			$val = $params{$name} || '';
+		}
 		$ret .= format_key_value($label, $val);
 	}
 	return $ret;
@@ -1140,17 +1366,21 @@ sub get_header
 	my($this_type) = @_;
 	$this_type = '' if not defined $this_type;
 	my $ret = '';
+	my $display_name = 'Select a category';
+	if(defined $this_type and defined $CATEGORIES{$this_type}) {
+		$display_name = $CATEGORIES{$this_type}->display_name();
+	}
 	$ret .= <<_EOHEADER;
 <HTML>
 <HEAD>
-<TITLE>Unique ID</TITLE>
+<TITLE>Unique ID: $display_name</TITLE>
 </HEAD>
 <BODY>
 <H1>Unique ID</H1>
 _EOHEADER
 	$ret .= get_form_header();
 	$ret .= qq(<SELECT NAME="type">\n);
-	foreach my $key (sort keys %CATEGORIES)
+	foreach my $key (sort { $CATEGORIES{$a}->display_name() cmp $CATEGORIES{$b}->display_name() } keys %CATEGORIES)
 	{
 		my $name = $CATEGORIES{$key}->display_name();
 		my $selected = '';
@@ -1179,10 +1409,12 @@ sub get_form_footer
 sub get_footer
 {
 	return <<END_FOOTER;
+<hr>
+<p>Results by $PROGRAM_NAME version $VERSION
 <p>This software (and any results) is provided with ABSOLUTELY NO WARRANTY.
 <a href="http://www.highprogrammer.com/alan/numbers/disclaimer.html">Further
 disclaimer details</a>.
-<a href="http://www.highprogrammer.com/alan/numbers/software.html">You can
+<p><a href="http://www.highprogrammer.com/alan/numbers/software.html">You can
 get a copy of this software</a>.
 </BODY>
 </HTML>
