@@ -655,7 +655,7 @@ sub main
 	my($impl) = $CATEGORIES{$category};
 	if(not defined $impl)
 	{
-		print get_header();
+		print get_header($category);
 		print "error, bad category $category\n";
 		print get_footer();
 		return;
@@ -673,13 +673,13 @@ sub main
 	my($step) = param('step');
 	if(not defined $step)
 	{
-		print get_header();
+		print get_header($category);
 		print get_impl_form($impl, \%params, {});
 		print get_footer();
 		return;
 	}
 
-	print get_header();
+	print get_header($category);
 	my($error_fields, $error_explain, $output) =
 		$impl->process(%params);
 	print "<H2>".$impl->display_name()." Output</H2>\n";
@@ -724,6 +724,8 @@ sub get_impl_form {
 #===============================================================================
 sub get_header
 {
+	my($this_type) = @_;
+	$this_type = '' if not defined $this_type;
 	my $ret = '';
 	$ret .= <<_EOHEADER;
 <HTML>
@@ -738,7 +740,9 @@ _EOHEADER
 	foreach my $key (sort keys %CATEGORIES)
 	{
 		my $name = $CATEGORIES{$key}->display_name();
-		$ret .= qq(<OPTION VALUE="$key">$name</OPTION>\n);
+		my $selected = '';
+		$selected = ' SELECTED' if $key eq $this_type;
+		$ret .= qq(<OPTION VALUE="$key"$selected>$name</OPTION>\n);
 	}
 	$ret .= qq(</SELECT>\n);
 	$ret .= get_form_footer('Change category');
