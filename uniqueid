@@ -7,8 +7,69 @@ use strict;
 #===============================================================================
 sub soundex_database { '/home/chaos/public/soundex.data' }
 
+
 #===============================================================================
-sub soundex { return Text::Soundex::soundex(@_); }
+sub soundex_similar_last_names
+{
+	my($Soundex) = @_;
+	my($database) = main::soundex_database();
+	open(INDEX,$database) or
+		return "Name database is currently unavailable.  ".
+		"Unable to display name guesses. Please try again later.".
+		"($database  $!)"
+		;
+	main::look(*INDEX, $Soundex, 0, 0);
+	my $line = <INDEX>;
+	close(INDEX);
+	($line) = ($line =~ /.+\t(.+)/);
+	my(@names) = split(/, ?/, $line);
+	foreach my $n (@names) {
+		$n =~ s/(\w+)/\u\L$1/g;
+	}
+	return @names;
+}
+
+#===============================================================================
+sub soundex_sound_guess
+{
+	my($Name) = @_;
+	my($Return, @Parts, $This);
+	@Parts = split(//,$Name);
+	$Return = shift(@Parts).'e';
+	while($This = shift(@Parts))
+	{
+		if   ($This == 1) { $Return .= 'be'; } #bfpv
+		elsif($This == 2) { $Return .= 'se'; } #cgjkqsxz
+		elsif($This == 3) { $Return .= 'te'; } #td
+		elsif($This == 4) { $Return .= 'le'; } #l
+		elsif($This == 5) { $Return .= 'me'; } #mn
+		elsif($This == 6) { $Return .= 're'; } #r
+	}
+	return($Return);
+}
+
+#===============================================================================
+sub describe_soundex
+{
+	my($Name) = @_;
+	my($Return, @Parts, $This);
+
+	@Parts = split(//,$Name);
+
+	$Return = 'Starts with a '.shift(@Parts);
+	while($This = shift(@Parts))
+	{
+		$Return .= ', followed by a ';
+		if   ($This == 1) { $Return .= 'labial (B, F, P, or V)'; }
+		elsif($This == 2) { $Return .= 'gutteral or sibilant (C, G, J, K, Q, S, X, or Z)'; }
+		elsif($This == 3) { $Return .= 'dental (D or T)'; }
+		elsif($This == 4) { $Return .= 'long liquid (L)'; }
+		elsif($This == 5) { $Return .= 'nasal (M or N)'; }
+		elsif($This == 6) { $Return .= 'short liquid (R)'; }
+	}
+	$Return .= '.';
+	return($Return);
+}
 
 #===============================================================================
 sub validate_options
@@ -227,10 +288,9 @@ sub process
 	my($gender) = gender($day_month);
 	my($first_name) = first_name($first_middle, $gender);
 	my($middle_init) = middle_init($first_middle).'.';
-	my($last_name) = 'WORK IN PROGRESS';
-	my($last_name_sound) = last_name_sound_describe($last);
-	my($last_name_sound_guess) = last_name_sound_guess($last);
-	my(@similar_last_names) = similar_last_names($last);
+	my($last_name_sound) = main::describe_soundex($last);
+	my($last_name_sound_guess) = main::soundex_sound_guess($last);
+	my(@similar_last_names) = main::soundex_similar_last_names($last);
 	my($similar_last_names) = join(', ', @similar_last_names);
 	my($month) = month_name($day_month);
 	my($day) = day($day_month);
@@ -239,7 +299,7 @@ sub process
 	$output =
 		main::format_key_value('First Name', $first_name).
 		main::format_key_value('Middle Initial', $middle_init).
-		main::format_key_value('Last Name', $last_name.
+		main::format_key_value('Last Name', $last_name_sound.
 		" Perhaps it sounds like \"$last_name_sound_guess\"").
 		main::format_key_value('Last Name Guesses', $similar_last_names).
 		main::format_key_value('Gender', $gender).
@@ -332,65 +392,6 @@ sub first_name
 }
 
 
-sub last_name_sound_describe
-{
-	my($Name) = @_;
-	my($Return, @Parts, $This);
-
-	@Parts = split(//,$Name);
-
-	$Return = 'Starts with a '.shift(@Parts);
-	while($This = shift(@Parts))
-	{
-		$Return .= ', followed by a ';
-		if   ($This == 1) { $Return .= 'labial'; }
-		elsif($This == 2) { $Return .= 'gutteral or sibilant'; }
-		elsif($This == 3) { $Return .= 'dental'; }
-		elsif($This == 4) { $Return .= 'long liquid'; }
-		elsif($This == 5) { $Return .= 'nasal'; }
-		elsif($This == 6) { $Return .= 'short liquid'; }
-	}
-	$Return .= '.';
-	return($Return);
-}
-
-sub last_name_sound_guess
-{
-	my($Name) = @_;
-	my($Return, @Parts, $This);
-	@Parts = split(//,$Name);
-	$Return = shift(@Parts).'e';
-	while($This = shift(@Parts))
-	{
-		if   ($This == 1) { $Return .= 'be'; } #bfpv
-		elsif($This == 2) { $Return .= 'se'; } #cgjkqsxz
-		elsif($This == 3) { $Return .= 'te'; } #td
-		elsif($This == 4) { $Return .= 'le'; } #l
-		elsif($This == 5) { $Return .= 'me'; } #mn
-		elsif($This == 6) { $Return .= 're'; } #r
-	}
-	return($Return);
-}
-
-sub similar_last_names
-{
-	my($Soundex) = @_;
-	my($database) = main::soundex_database();
-	open(INDEX,$database) or
-		return "Name database is currently unavailable.  ".
-		"Unable to display name guesses. Please try again later.".
-		"($database  $!)"
-		;
-	main::look(*INDEX, $Soundex, 0, 0);
-	my $line = <INDEX>;
-	close(INDEX);
-	($line) = ($line =~ /.+\t(.+)/);
-	my(@names) = split(/, ?/, $line);
-	foreach my $n (@names) {
-		$n =~ s/(\w+)/\u\L$1/g;
-	}
-	return @names;
-}
 
 
 ################################################################################
@@ -593,6 +594,136 @@ sub first_name_middle_init
 
 
 
+
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+
+
+
+
+
+package UniqueID::DriversLicense::Illinois;
+
+sub new {
+	my $class = shift;
+	$class = ref($class) if ref($class);
+
+	bless my $self = {}, $class;
+
+	return $self;
+}
+
+sub uid { 'dl_il' }
+sub display_name { "Illinois Driver's License Calculator" }
+sub describe {
+	my($link) = main::path_to_script();
+	return <<_EODESC;
+Calculate your Illinois Driver's License number from your
+information.
+<A HREF="http://www.highprogrammer.com/alan/numbers/dl_il/">How it works</A>.
+<A HREF="$link/dl_ilr">Reverse analyze an exististing number</A>.
+_EODESC
+#'
+}
+
+sub options
+{
+	return(
+		['Last Name', 'last', 'text', 40],
+		#['First Name', 'first', 'text', 40],
+		#['Middle Initial', 'middle', 'text', 1],
+		['Gender', 'gender', 'radio', ['M', 'F'] ],
+		['Date of Birth'],
+		[' Year', 'y', 'text', 4],
+		[' Month', 'm', 'text', 2],
+		[' Day', 'd', 'text', 2],
+	);
+}
+
+sub process
+{
+	my($self) = shift;
+	my(%params) = @_;
+	my($last) = $params{'last'};
+	#my($first) = $params{'first'};
+	#my($middle) = $params{'middle'};
+	my($gender) = uc($params{'gender'});
+	my($yy) = $params{'y'};
+	my($mm) = $params{'m'};
+	my($dd) = $params{'d'};
+	my(%error_fields, $error_explain, $output);
+
+	($error_explain, %error_fields) =
+		main::validate_options(\%params, [$self->options()]);
+
+	$yy -= 1900 if $yy >= 1900 and $yy < 2000;
+	$yy -= 2000 if $yy >= 2000 and $yy < 2100;
+
+	if($yy > 99 or $yy < 0) {
+		$error_fields{'y'} .= 'Please specify year of birth as a one or '.
+			'two digit number. '.
+			'For example, for 1975 specify "75", for 2006 specify "6".';
+	}
+	if($mm > 12 or $mm < 1) {
+		$error_fields{'m'} .= 'Please specify month of birth as a '.
+			'number from 1 to 12. '.
+			'For example, for January specify "1", for December specify "12".';
+	}
+	if($dd > 31 or $dd < 1) {
+		$error_fields{'d'} .= 'Please specify day of birth as a '.
+			'number from 1 to 31.';
+	}
+	if($gender ne 'M' and $gender ne 'F') {
+		$error_fields{'gender'} .= 'Please specify gender.';
+	}
+	
+	if((defined $error_explain and length $error_explain) or
+		scalar keys %error_fields){
+		return(\%error_fields, $error_explain, $output);
+	}
+
+	#$middle = substr $middle, 0, 1;
+	my($YearTens, $YearOnes) = split(//,sprintf("%02d",$yy));
+
+	my $dl = main::soundex($last).'-'.
+		'???'.
+		$YearTens.'-'.$YearOnes.
+		month_day_gender($mm, $dd, $gender).'-??';
+	
+	$output = main::format_key_value("Driver's License Number", $dl).
+	"I don't yet know how the fourth through sixth digits are calculated. ".
+	"The last two digits cannot be determined.  They represent the ".
+	"number of people who have the exact same license number as you ".
+	"(excepting the last two digits), when you got your license.";
+	
+
+
+	return(\%error_fields, $error_explain, $output);
+}
+
+sub month_day_gender
+{
+	my($Month, $Day, $Gender) = @_;
+	my($DateNo);
+	$Gender = uc($Gender);
+
+	$DateNo = ($Month - 1) * 40 + $Day;
+	if($Gender eq 'F') { $DateNo += 500; }
+
+	$DateNo = sprintf("%03d",$DateNo);
+
+	return($DateNo);
+}
+
+
+
+
+
+
+
+
 ################################################################################
 ################################################################################
 ################################################################################
@@ -606,11 +737,13 @@ package main;
 my(%CATEGORIES);
 sub add_category {
 	my($i) = @_;
+	die if exists $CATEGORIES{$i->uid()};
 	$CATEGORIES{$i->uid()} = $i;
 }
 add_category(UniqueID::DriversLicense::Wisconsin->new());
 add_category(UniqueID::DriversLicense::WisconsinReverse->new());
 add_category(UniqueID::Coding::Soundex->new());
+add_category(UniqueID::DriversLicense::Illinois->new());
 
 main();
 exit;
