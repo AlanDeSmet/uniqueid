@@ -622,6 +622,7 @@ sub describe {
 	return <<_EODESC;
 Calculate your Illinois Driver's License number from your
 information.
+<STRONG>This is a work in progress and is not yet complete.</STRONG>
 <A HREF="http://www.highprogrammer.com/alan/numbers/dl_il/">How it works</A>.
 <A HREF="$link/dl_ilr">Reverse analyze an exististing number</A>.
 _EODESC
@@ -719,6 +720,182 @@ sub month_day_gender
 
 
 
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+
+
+
+
+
+package UniqueID::DriversLicense::IllinoisReverse;
+
+sub new {
+	my $class = shift;
+	$class = ref($class) if ref($class);
+
+	bless my $self = {}, $class;
+
+	return $self;
+}
+
+sub uid { 'dl_ilr' }
+sub display_name { "Illinois Driver's License Analyzer" }
+sub describe {
+	my($link) = main::path_to_script();
+	return <<_EODESC;
+Given a Illinois Driver's License number, determine it's owner's
+identity.
+<STRONG>This is a work in progress and is not yet complete.</STRONG>
+<A HREF="http://www.highprogrammer.com/alan/numbers/dl_wi/">How it works</A>.
+<A HREF="$link/dl_il">Create a fictional number to test</A>.
+_EODESC
+#'
+}
+
+sub options
+{
+	return(
+		["Illinois Driver's License Number", 'l', 'text', 17],
+	);
+}
+
+sub process
+{
+	my($self) = shift;
+	my(%params) = @_;
+	my($lic) = $params{'l'};
+	my(%error_fields, $error_explain, $output);
+	
+
+	my($last, $first_middle, $year_ten, $year_one, $day_month, $count) =
+		($lic =~ /([A-Za-z]\d\d\d)-(\d\d\d)(\d)-(\d)(\d\d\d)-(..)/);
+	if(not defined $day_month) {
+		$error_fields{'l'} .=
+		"Please specify an Illinois Driver's License number. It will look ".
+		'like "S530-4615-0244-03".';
+	}
+
+	if((defined $error_explain and length $error_explain) or
+		scalar keys %error_fields){
+		return(\%error_fields, $error_explain, $output);
+	}
+
+	my($gender) = gender($day_month);
+	my($first_name) = first_name($first_middle, $gender);
+	my($middle_init) = middle_init($first_middle).'.';
+	my($last_name_sound) = main::describe_soundex($last);
+	my($last_name_sound_guess) = main::soundex_sound_guess($last);
+	my(@similar_last_names) = main::soundex_similar_last_names($last);
+	my($similar_last_names) = join(', ', @similar_last_names);
+	my($month) = month_name($day_month);
+	my($day) = day($day_month);
+	my($year) = $year_ten.$year_one;
+
+	$output =
+		main::format_key_value('First Name', $first_name).
+		main::format_key_value('Middle Initial', $middle_init).
+		main::format_key_value('Last Name', $last_name_sound.
+		" Perhaps it sounds like \"$last_name_sound_guess\"").
+		main::format_key_value('Last Name Guesses', $similar_last_names).
+		main::format_key_value('Gender', $gender).
+		main::format_key_value('Date of Birth', "$month $day, '$year").
+		main::format_key_value('Wild Guess', "$first_name $middle_init ".
+			"$similar_last_names[0], $gender, born $month $day, 19$year").
+		'';
+
+	return(\%error_fields, $error_explain, $output);
+}
+
+sub day {
+	my($input) = @_;
+	$input %= 500;
+	return($input % 40);
+}
+
+sub month_num {
+	my($input) = @_;
+	$input %= 500;
+	return(($input - day($input)) / 40 + 1);
+}
+
+sub month_name {
+	my($input) = @_;
+	my(@MONTHS) = ( 'January', 'February', 'March', 'April', 'May', 'June',
+		'July', 'August', 'September', 'October', 'November', 'December' );
+	return @MONTHS[month_num($input)-1];
+}
+
+sub gender {
+	return 'Unknown (work in progress)';
+	#my($input) = @_;
+	#if($input > 500) { return 'female'; }
+	#return 'male';
+}
+
+sub middle_init
+{
+	return 'Unknown (work in progress)';
+	my($input) = @_;
+	$input %= 20;
+	my(%MIDDLE_INIT) = (
+		1 => 'A', 2 => 'B', 3 => 'C', 4 => 'D', 5 => 'E', 6 => 'F', 7 => 'G',
+		8 => 'H', 9 => 'I', 10 => 'J', 11 => 'K', 12 => 'L', 13 => 'M',
+		14 => 'N or O', 15 => 'P or Q', 16 => 'R', 17 => 'S',
+		18 => 'T, U, or V', 19 => 'W, X, Y, or Z',
+	);
+
+	return($MIDDLE_INIT{$input});
+}
+
+
+sub first_name
+{
+	return 'Unknown (work in progress)';
+	my($Input, $Gender) = @_;
+	my(%Male, %Female, %FirstInit);
+	my($Name);
+	%Male = (
+		120=>'Carl', 140=>'Charles', 180=>'Donald', 20=>'Albert',
+		220=>'Edward', 260=>'Frank', 300=>'George', 340=>'Harold',
+		360=>'Harry', 380=>'Henry', 40=>'Arthur', 440=>'James',
+		460=>'John', 480=>'Joseph', 560=>'Martin', 580=>'Marvin',
+		600=>'Melvin', 680=>'Paul', 740=>'Richard', 760=>'Robert',
+		80=>'Bernard', 820=>'Thomas', 900=>'Walter', 920=>'William',
+	);
+	%Female = (
+		120=>'Catherine', 140=>'Clara', 180=>'Dorothy', 20=>'Alice',
+		220=>'Elizabeth', 260=>'Florence', 300=>'Grace', 340=>'Harriet',
+		360=>'Hazel', 380=>'Helen', 40=>'Ann, Anna, Anne, Annie',
+		440=>'Jane, Jayne', 460=>'Jean', 480=>'Joan', 580=>'Mary',
+		600=>'Mildred', 680=>'Patricia', 740=>'Ruby', 760=>'Ruth',
+		80=>'Bette, Bettie, Betty', 820=>'Thelma', 900=>'Wanda', 920=>'Wilma',
+	);
+	%FirstInit = (
+		0 => 'A', 60 => 'B', 100 => 'C', 160 => 'D', 200 => 'E', 240 => 'F',
+		280 => 'G', 320 => 'H', 400 => 'I', 420 => 'J', 500 => 'K', 520 => 'L',
+		540 => 'M', 620 => 'N', 640 => 'O', 660 => 'P', 700 => 'Q', 720 => 'R',
+		780 => 'S', 800 => 'T', 840 => 'U', 860 => 'V', 880 => 'W', 940 => 'X',
+		960 => 'Y', 980 => 'Z',
+	);
+
+	$Input -= $Input%20;
+ 	if(defined($Male{$Input}))
+ 	{
+		if($Gender =~ /f/i)	{ $Name = $Female{$Input}; }
+		else				{ $Name = $Male{$Input}; }
+	}
+ 	else
+ 		{ $Name = $FirstInit{$Input}; }
+	return($Name);
+}
+
+
+
+
+
+
 
 
 
@@ -744,6 +921,7 @@ add_category(UniqueID::DriversLicense::Wisconsin->new());
 add_category(UniqueID::DriversLicense::WisconsinReverse->new());
 add_category(UniqueID::Coding::Soundex->new());
 add_category(UniqueID::DriversLicense::Illinois->new());
+add_category(UniqueID::DriversLicense::IllinoisReverse->new());
 
 main();
 exit;
@@ -867,7 +1045,7 @@ _EOHEADER
 sub get_form_header
 {
 	my($path) = path_to_script();
-	return qq(<FORM ACTION="$path" METHOD=GET>\n);
+	return qq(<FORM ACTION="$path" METHOD=POST>\n);
 }
 #===============================================================================
 sub get_form_footer
