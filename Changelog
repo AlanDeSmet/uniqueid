@@ -1,6 +1,10 @@
 0.X.X - ?
 - Fixed typo in Washington State when encoding birthdays on the 20th
   of the month.
+- Fixed typo in MN, MI, MD name table.  This typo caused errors in encoding
+  several names starting with "Ja," most notably "James."
+- Input in now first name, last name instead of last name, first name.
+  The previous ordering surprised people.
 
 0.4.1 - November 13, 2003
 - Fixed typo in Washington State license that could cause erroneous

@@ -575,14 +575,14 @@ sub options
 {
 	my($self) = shift;
 	my @options;
-	push @options, ['Last Name', 'last', 'text', 40]
-		if $self->need_last_name();
 	push @options, ['First Name', 'first', 'text', 40]
 		if $self->need_first_name();
 	push @options, ['Middle Initial', 'middle', 'text', 1, {optional=>1}]
 		if $self->need_middle_initial();
 	push @options, ['Middle Name', 'middle', 'text', 40, {optional=>1}]
 		if $self->need_middle_name();
+	push @options, ['Last Name', 'last', 'text', 40]
+		if $self->need_last_name();
 	push @options, ['Gender', 'gender', 'radio', ['M', 'F'] ]
 		if $self->need_gender();
 	push @options, ['Date of Birth']
@@ -1145,7 +1145,10 @@ $link if you find any problems.
 
 ENDIT
 }
-sub describe_more { main::html_alphaware() }
+sub describe_more { 
+	return main::html_alphaware().
+		"<p><A HREF=\"http://www.highprogrammer.com/alan/numbers/dl_us_wa.html\">How this works</A>.\n";
+	}
 
 sub need_last_name { return 1; }
 sub need_first_name { return 1; }
@@ -1833,9 +1836,9 @@ sub build_name_encoding_table {
 	simple_range(\%t, 'i', 325, 351);
 	add_map(\%t, 'j', 352);
 	add_map(\%t, 'ja', 353);
-	fill(\%t, 'jaa', 'jaz', 354, 380, {376=>'james'});
+	fill(\%t, 'jaa', 'jaz', 354, 380, {367=>'james'});
 	fill(\%t, 'jb', 'je', 381, 384);
-	fill(\%t, 'jea', 'jez', 385, 410, {376=>'james'});
+	fill(\%t, 'jea', 'jez', 385, 410);
 	fill(\%t, 'jf', 'jo', 411, 420);
 	fill(\%t, 'joa', 'joz', 421, 448, {429=>'john', 441=>'joseph'});
 	fill(\%t, 'jp', 'jz', 449, 459);
