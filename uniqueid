@@ -48,7 +48,7 @@ $CGI::DISABLE_UPLOADS = 1; # There is no reason to accept uploads.
 my $PROGRAM_NAME = 'Unique ID';
 my $VERSION;
 BEGIN {
-	my $ASSIGNED_VERSION = '0.2.0';
+	my $ASSIGNED_VERSION = '0.2.1';
 	my $CVS_VERSION = '$Revision$';
 	my($cvs_bits) = ($CVS_VERSION =~ /Revision: ([\d.]+)/);
 	$VERSION = "$ASSIGNED_VERSION/$cvs_bits";
@@ -1310,12 +1310,17 @@ exit;
 sub main
 {
 	print "Content-type: text/html\n\n";
-	my(@params) = param();
+	my(@params);
+	# old versions of CGI just die on failure.
+	eval { @params = param(); };
 
-	if(@params == 0 and CGI::cgi_error()) {
-		fatal_error("Your web browser sent an unexpectedly large request.  This software is unwilling to accept requests that large.  Please try again.  If the error persists, most likely your web browser is broken.");
-		return;
-
+	{
+		my $failure = $@;
+		my $cgi_error = eval {CGI::cgi_error()};
+		if($failure or (@params == 0 and $cgi_error)) {
+			fatal_error("Your web browser sent an unexpectedly large request.  This software is unwilling to accept requests that large.  Please try again.  If the error persists, most likely your web browser is broken.");
+			return;
+		}
 	}
 
 	my($category) = param('type');

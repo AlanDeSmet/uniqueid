@@ -1,13 +1,13 @@
-0.2.0
+0.2.0 - August 25, 2003
 - Added support for encoding New Hampshire driver's license numbers.
 - Added incomplete support for Washington driver's license numbers.
 - General improvements and cleanup.
 
-0.1.2
+0.1.2 - Around May 12, 2002
 - First announced public release. 
 - Supports encoding and decoding Wisconsin, Illinois, and Florida driver's
   license numbers.  Supports encoding using Soundex.
 
-pre 0.1.2
+pre 0.1.2 - Unknown
 - Lost to time. 
 - Supported encoding and decoding Wisconsin diver's license numbers.
