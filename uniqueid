@@ -3,6 +3,8 @@
 use CGI qw(param);
 use strict;
 
+sub soundex_database { '/home/chaos/public/soundex.data' }
+
 # TODO: This is buggy.  Get better implementation. Text::Soundex?
 sub soundex
 {
@@ -47,6 +49,52 @@ sub validate_options
 
 
 
+# Usage: &look(*FILEHANDLE,$key,$dict,$fold)
+# Sets file position in FILEHANDLE to be first line greater than or equal
+# (stringwise) to $key.  Pass flags for dictionary order and case folding.
+# taken from look.pl, part of perl distribution.
+
+sub look {
+	local(*FH, $_);
+	my($key, $dict, $fold);
+    (*FH,$key,$dict,$fold) = @_;
+    my($max,$min,$mid);
+    my($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,
+       $blksize,$blocks) = stat(FH);
+    $blksize = 8192 unless $blksize;
+    $key =~ s/[^\w\s]//g if $dict;
+    $key = lc $key if $fold;
+    $max = int($size / $blksize);
+    while ($max - $min > 1) {
+	$mid = int(($max + $min) / 2);
+	seek(FH,$mid * $blksize,0);
+	$_ = <FH> if $mid;		# probably a partial line
+	$_ = <FH>;
+	chop;
+	s/[^\w\s]//g if $dict;
+	$_ = lc $_ if $fold;
+	if ($_ lt $key) {
+	    $min = $mid;
+	}
+	else {
+	    $max = $mid;
+	}
+    }
+    $min *= $blksize;
+    seek(FH,$min,0);
+    <FH> if $min;
+    while (<FH>) {
+	chop;
+	s/[^\w\s]//g if $dict;
+	$_ = lc $_ if $fold;
+	last if $_ ge $key;
+	$min = tell(FH);
+    }
+    seek(FH,$min,0);
+    $min;
+}
+
+
 ################################################################################
 ################################################################################
 ################################################################################
@@ -71,24 +119,19 @@ sub uid { 'dl_wir' }
 sub display_name { "Wisconsin Driver's License Analyzer" }
 sub describe {
 	return <<_EODESC;
-Calculate your Wisconsin Driver's License number from your
-information.
+Given a Wisconsin Driver's License number, determine it's owner's
+identity.
 <A HREF="http://www.highprogrammer.com/alan/numbers/dl_wi/">How it works</A>.
+If you would like to create a fictional number to test, select
+"Wisconsin Driver's License Calculator" above.
 _EODESC
-#'
+#"
 }
 
 sub options
 {
 	return(
-		['Last Name', 'last', 'text', 40],
-		['First Name', 'first', 'text', 40],
-		['Middle Initial', 'middle', 'text', 1],
-		['Gender', 'gender', 'radio', ['M', 'F'] ],
-		['Date of Birth'],
-		[' Year', 'y', 'text', 4],
-		[' Month', 'm', 'text', 2],
-		[' Day', 'd', 'text', 2],
+		["Wisconsin Driver's License Number", 'l', 'text', 17],
 	);
 }
 
@@ -96,149 +139,190 @@ sub process
 {
 	my($self) = shift;
 	my(%params) = @_;
-	my($last) = $params{'last'};
-	my($first) = $params{'first'};
-	my($middle) = $params{'middle'};
-	my($gender) = uc($params{'gender'});
-	my($yy) = $params{'y'};
-	my($mm) = $params{'m'};
-	my($dd) = $params{'d'};
+	my($lic) = $params{'l'};
 	my(%error_fields, $error_explain, $output);
-
-	($error_explain, %error_fields) =
-		main::validate_options(\%params, [$self->options()]);
-
-	$yy -= 1900 if $yy >= 1900 and $yy < 2000;
-	$yy -= 2000 if $yy >= 2000 and $yy < 2100;
-
-	if($yy > 99 or $yy < 0) {
-		$error_fields{'y'} .= 'Please specify year of birth as a one or '.
-			'two digit number. '.
-			'For example, for 1975 specify "75", for 2006 specify "6".';
-	}
-	if($mm > 12 or $mm < 1) {
-		$error_fields{'m'} .= 'Please specify month of birth as a '.
-			'number from 1 to 12. '.
-			'For example, for January specify "1", for December specify "12".';
-	}
-	if($dd > 31 or $dd < 1) {
-		$error_fields{'d'} .= 'Please specify day of birth as a '.
-			'number from 1 to 31.';
-	}
-	if($gender ne 'M' and $gender ne 'F') {
-		$error_fields{'gender'} .= 'Please specify gender.';
-	}
 	
+
+	my($last, $first_middle, $year_ten, $year_one, $day_month, $count) =
+		($lic =~ /([A-Za-z]\d\d\d)-(\d\d\d)(\d)-(\d)(\d\d\d)-(..)/);
+	if(not defined $day_month) {
+		$error_fields{'l'} .=
+		"Please specify a Wisconsin Driver's License number. It will look ".
+		'like "S530-4615-0244-03".';
+	}
+
 	if((defined $error_explain and length $error_explain) or
 		scalar keys %error_fields){
 		return(\%error_fields, $error_explain, $output);
 	}
 
-	$middle = substr $middle, 0, 1;
-	my($YearTens, $YearOnes) = split(//,sprintf("%02d",$yy));
+	my($gender) = gender($day_month);
+	my($first_name) = first_name($first_middle, $gender);
+	my($middle_init) = middle_init($first_middle).'.';
+	my($last_name) = 'WORK IN PROGRESS';
+	my($last_name_sound) = last_name_sound_describe($last);
+	my($last_name_sound_guess) = last_name_sound_guess($last);
+	my(@similar_last_names) = similar_last_names($last);
+	my($similar_last_names) = join(', ', @similar_last_names);
+	my($month) = month_name($day_month);
+	my($day) = day($day_month);
+	my($year) = $year_ten.$year_one;
 
-	my $dl = main::soundex($last).'-'.
-		first_name_middle_init($first, $middle).
-		$YearTens.'-'.$YearOnes.
-		month_day_gender($mm, $dd, $gender).'-??';
-	
-	$output = "<STRONG>$dl</STRONG><P>".
-	"The last two digits cannot be determined.  They represent the ".
-	"number of people who have the exact same license number as you ".
-	"(excepting the last two digits), when you got your license.";
-	
-
+	$output =
+		"<STRONG>First Name:</STRONG> $first_name<BR>\n".
+		"<STRONG>Middle Initial:</STRONG> $middle_init<BR>\n".
+		"<STRONG>Last Name:</STRONG> $last_name_sound ".
+		"Perhaps it sounds like \"$last_name_sound_guess\"<BR>\n".
+		"<STRONG>Last Name Guesses:</STRONG> $similar_last_names<BR>\n".
+		"<STRONG>Gender:</STRONG> $gender<BR>\n".
+		"<STRONG>Date of Birth:</STRONG> $month $day, '$year ".
+		  "(Year of birth could be 18$year or 20$year.)<BR>\n".
+		"<STRONG>Wild Guess:</STRONG> $first_name $middle_init ".
+		"$similar_last_names[0], $gender, born $month $day, 19$year<BR>\n".
+		'';
 
 	return(\%error_fields, $error_explain, $output);
 }
 
-sub month_day_gender
+sub day {
+	my($input) = @_;
+	$input %= 500;
+	return($input % 40);
+}
+
+sub month_num {
+	my($input) = @_;
+	$input %= 500;
+	return(($input - day($input)) / 40 + 1);
+}
+
+sub month_name {
+	my($input) = @_;
+	my(@MONTHS) = ( 'January', 'February', 'March', 'April', 'May', 'June',
+		'July', 'August', 'September', 'October', 'November', 'December' );
+	return @MONTHS[month_num($input)-1];
+}
+
+sub gender {
+	my($input) = @_;
+	if($input > 500) { return 'female'; }
+	return 'male';
+}
+
+sub middle_init
 {
-	my($Month, $Day, $Gender) = @_;
-	my($DateNo);
-	$Gender = uc($Gender);
+	my($input) = @_;
+	$input %= 20;
+	my(%MIDDLE_INIT) = (
+		1 => 'A', 2 => 'B', 3 => 'C', 4 => 'D', 5 => 'E', 6 => 'F', 7 => 'G',
+		8 => 'H', 9 => 'I', 10 => 'J', 11 => 'K', 12 => 'L', 13 => 'M',
+		14 => 'N or O', 15 => 'P or Q', 16 => 'R', 17 => 'S',
+		18 => 'T, U, or V', 19 => 'W, X, Y, or Z',
+	);
 
-	$DateNo = ($Month - 1) * 40 + $Day;
-	if($Gender eq 'F') { $DateNo += 500; }
-
-	$DateNo = sprintf("%03d",$DateNo);
-
-	return($DateNo);
+	return($MIDDLE_INIT{$input});
 }
 
 
-sub first_name_middle_init
+sub first_name
 {
-	my($FN, $MiddleInit) = @_;
-	my($NameNum, %FirstNameLookup, %FirstInitLookup, %MiddleInitLookup);
-	my($Return);
-
-	$FN = uc($FN);
-	$MiddleInit = uc($MiddleInit);
-
-	%FirstNameLookup =
-	(
-		'ALBERT'	=> 20, 'ALICE'		=> 20,
-		'ANN'		=> 40, 'ANNE'		=> 40, 'ANNA'		=> 40,
-		'ANNIE'		=> 40, 'ARTHUR'	=> 40,
-		'BERNARD'	=> 80, 'BETTY'		=> 80, 'BETTE'		=> 80,
-		'BETTIE'	=> 80,
-		'CARL'		=> 120, 'CATHERINE'	=> 120,
-		'CHARLES'	=> 140, 'CLARA'		=> 140,
-		'DONALD'	=> 180, 'DOROTHY'	=> 180,
-		'EDWARD'	=> 220, 'ELIZABETH'	=> 220,
-		'FLORENCE'	=> 260, 'FRANK'		=> 260,
-		'GEORGE'	=> 300, 'GRACE'		=> 300,
-		'HAROLD'	=> 340, 'HARRIET'	=> 340,
-		'HARRY'		=> 360, 'HAZEL'		=> 360,
-		'HELEN'		=> 380, 'HENRY'		=> 380,
-		'JAMES'		=> 440, 'JANE'		=> 440, 'JAYNE'		=> 440,
-		'JEAN'		=> 460, 'JOHN'		=> 460,
-		'JOAN'		=> 480, 'JOSEPH'	=> 480,
-		'MARGARET'	=> 560, 'MARTIN'	=> 560,
-		'MARVIN'	=> 580, 'MARY'		=> 580,
-		'MELVIN'	=> 600, 'MILDRED'	=> 600,
-		'PATRICIA'	=> 680, 'PAUL'		=> 680,
-		'RICHARD'	=> 740, 'RUBY'		=> 740,
-		'ROBERT'	=> 760, 'RUTH'		=> 760,
-		'THELMA'	=> 820, 'THOMAS'	=> 820,
-		'WALTER'	=> 900, 'WANDA'		=> 900,
-		'WILLIAM'	=> 920, 'WILMA'		=> 920,
+	my($Input, $Gender) = @_;
+	my(%Male, %Female, %FirstInit);
+	my($Name);
+	%Male = (
+		120=>'Carl', 140=>'Charles', 180=>'Donald', 20=>'Albert',
+		220=>'Edward', 260=>'Frank', 300=>'George', 340=>'Harold',
+		360=>'Harry', 380=>'Henry', 40=>'Arthur', 440=>'James',
+		460=>'John', 480=>'Joseph', 560=>'Martin', 580=>'Marvin',
+		600=>'Melvin', 680=>'Paul', 740=>'Richard', 760=>'Robert',
+		80=>'Bernard', 820=>'Thomas', 900=>'Walter', 920=>'William',
+	);
+	%Female = (
+		120=>'Catherine', 140=>'Clara', 180=>'Dorothy', 20=>'Alice',
+		220=>'Elizabeth', 260=>'Florence', 300=>'Grace', 340=>'Harriet',
+		360=>'Hazel', 380=>'Helen', 40=>'Ann, Anna, Anne, Annie',
+		440=>'Jane, Jayne', 460=>'Jean', 480=>'Joan', 580=>'Mary',
+		600=>'Mildred', 680=>'Patricia', 740=>'Ruby', 760=>'Ruth',
+		80=>'Bette, Bettie, Betty', 820=>'Thelma', 900=>'Wanda', 920=>'Wilma',
+	);
+	%FirstInit = (
+		0 => 'A', 60 => 'B', 100 => 'C', 160 => 'D', 200 => 'E', 240 => 'F',
+		280 => 'G', 320 => 'H', 400 => 'I', 420 => 'J', 500 => 'K', 520 => 'L',
+		540 => 'M', 620 => 'N', 640 => 'O', 660 => 'P', 700 => 'Q', 720 => 'R',
+		780 => 'S', 800 => 'T', 840 => 'U', 860 => 'V', 880 => 'W', 940 => 'X',
+		960 => 'Y', 980 => 'Z',
 	);
 
-	%FirstInitLookup =
-	(
-		'A' =>   0, 'B' =>  60, 'C' => 100, 'D' => 160, 'E' => 200, 'F' => 240,
-		'G' => 280, 'H' => 320, 'I' => 400, 'J' => 420, 'K' => 500, 'L' => 520,
-		'M' => 540, 'N' => 620, 'O' => 640, 'P' => 660, 'Q' => 700, 'R' => 720,
-		'S' => 780, 'T' => 800, 'U' => 840, 'V' => 860, 'W' => 880, 'X' => 940,
-		'Y' => 960, 'Z' => 980,
-	);
+	$Input -= $Input%20;
+ 	if(defined($Male{$Input}))
+ 	{
+		if($Gender =~ /f/i)	{ $Name = $Female{$Input}; }
+		else				{ $Name = $Male{$Input}; }
+	}
+ 	else
+ 		{ $Name = $FirstInit{$Input}; }
+	return($Name);
+}
 
-	%MiddleInitLookup =
-	(
-		'A' =>  1, 'B' =>  2, 'C' =>  3, 'D' =>  4, 'E' =>  5, 'F' =>  6,
-		'G' =>  7, 'H' =>  8, 'I' =>  9, 'J' => 10, 'K' => 11, 'L' => 12,
-		'M' => 13, 'N' => 14, 'O' => 14, 'P' => 15, 'Q' => 15, 'R' => 16,
-		'S' => 17, 'T' => 18, 'U' => 18, 'V' => 18, 'W' => 19, 'X' => 19,
-		'Y' => 19, 'Z' => 19,
-	);
 
-	if(defined($FirstNameLookup{$FN}))
-		{ $NameNum = $FirstNameLookup{$FN}; }
-	elsif(defined($FirstInitLookup{(split(//,$FN))[0]}))
-		{ $NameNum = $FirstInitLookup{(split(//,$FN))[0]}; }
-	else
-		{ return('BAD'); }
+sub last_name_sound_describe
+{
+	my($Name) = @_;
+	my($Return, @Parts, $This);
 
-	if(defined($MiddleInitLookup{$MiddleInit}))
-		{ $NameNum += $MiddleInitLookup{$MiddleInit}; }
-	else
-		{ return('BAD'); }
+	@Parts = split(//,$Name);
 
-	$Return = sprintf("%03d",$NameNum);
-
+	$Return = 'Starts with a '.shift(@Parts);
+	while($This = shift(@Parts))
+	{
+		$Return .= ', followed by a ';
+		if   ($This == 1) { $Return .= 'labial'; }
+		elsif($This == 2) { $Return .= 'gutteral or sibilant'; }
+		elsif($This == 3) { $Return .= 'dental'; }
+		elsif($This == 4) { $Return .= 'long liquid'; }
+		elsif($This == 5) { $Return .= 'nasal'; }
+		elsif($This == 6) { $Return .= 'short liquid'; }
+	}
+	$Return .= '.';
 	return($Return);
+}
+
+sub last_name_sound_guess
+{
+	my($Name) = @_;
+	my($Return, @Parts, $This);
+	@Parts = split(//,$Name);
+	$Return = shift(@Parts).'e';
+	while($This = shift(@Parts))
+	{
+		if   ($This == 1) { $Return .= 'be'; } #bfpv
+		elsif($This == 2) { $Return .= 'se'; } #cgjkqsxz
+		elsif($This == 3) { $Return .= 'te'; } #td
+		elsif($This == 4) { $Return .= 'le'; } #l
+		elsif($This == 5) { $Return .= 'me'; } #mn
+		elsif($This == 6) { $Return .= 're'; } #r
+	}
+	return($Return);
+}
+
+sub similar_last_names
+{
+	my($Soundex) = @_;
+	my($database) = main::soundex_database();
+	open(INDEX,$database) or
+		return "Name database is currently unavailable.  ".
+		"Unable to display name guesses. Please try again later.".
+		"($database  $!)"
+		;
+	main::look(*INDEX, $Soundex, 0, 0);
+	my $line = <INDEX>;
+	close(INDEX);
+	($line) = ($line =~ /.+\t(.+)/);
+	my(@names) = split(/, ?/, $line);
+	foreach my $n (@names) {
+		$n =~ s/(\w+)/\u\L$1/g;
+	}
+	return @names;
 }
 
 
