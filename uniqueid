@@ -1629,8 +1629,13 @@ sub new {
 
 sub state_long { 'New York (pre 1992)' }
 sub state_short { 'ny92' }
-sub result_notes {
-	return "";
+sub result_notes { 
+	return <<ENDIT
+The question mark indicates an overflow digit.  There might not be
+anything there, but if you have the otherwise exact same number as someone
+else that digit will be used to distinguish between you.
+
+ENDIT
 }
 sub describe_more { 
 	return main::html_alphaware().
@@ -1741,14 +1746,6 @@ $describe_more
 _EODESC
 }
 
-sub result_notes { 
-	return <<ENDIT
-The question mark indicates an overflow digit.  There might not be
-anything there, but if you have the otherwise exact same number as someone
-else that digit will be used to distinguish between you.
-
-ENDIT
-}
 
 
 
@@ -2370,7 +2367,9 @@ $grade
 Given passport information calculate
 the two line Machine Readable Zone (MRZ) for a Machine Readable Passport
 (MRP).  This encoding system is documented
-<a href="http://www.highprogrammer.com/alan/numbers/mrp.html">here</a>
+<a href="http://www.highprogrammer.com/alan/numbers/mrp.html">here</a>.
+You can also <a href="$link/mrzpr">decode an existing MRZ</a>.</p>
+<p><strong>THIS DOES NOT WORK YET!</strong></p>
 _EODESC
 #'
 }
@@ -2449,7 +2448,8 @@ $grade
 <p>
 Given the two line Machine Readable Zone (MRZ) from a Machine Readable Passport
 (MRP), retrieve relevant information.  This encoding system is documented
-<a href="http://www.highprogrammer.com/alan/numbers/mrp.html">here</a>
+<a href="http://www.highprogrammer.com/alan/numbers/mrp.html">here</a>.
+You can also <a href="$link/mrzp">calculate an MRZ</a>.
 _EODESC
 #'
 }
@@ -2692,7 +2692,7 @@ sub main
 		($category) = ($tmp =~ m|/*([^/]+)|) if defined $tmp;
 	}
 
-	if($category eq $INTERNAL_CSS) {
+	if(defined $category and $category eq $INTERNAL_CSS) {
 		print "Content-type: text/css\n\n";
 		print get_internal_css();
 		return;
@@ -2848,6 +2848,7 @@ sub get_form_header
 	my($path, $name) = @_;
 	$path ||= path_to_script();
 	if(defined $name) { $name = " name=\"$name\""; }
+	else { $name = ""; }
 	return qq(<form action="$path"$name method=post>\n);
 }
 #===============================================================================
