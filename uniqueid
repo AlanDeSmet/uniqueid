@@ -1325,7 +1325,11 @@ sub main
 	if(not defined $impl)
 	{
 		print get_header($category);
-		print "error, bad category $category\n";
+		print <<ENDERROR;
+<strong>Error:</strong>
+The category "$category" was requested.  There is no category with that name.
+ENDERROR
+		print get_full_list();
 		print get_footer();
 		return;
 	}
@@ -1445,6 +1449,7 @@ sub get_form_footer
 #===============================================================================
 sub get_full_list {
 	my $ret = '';
+	$ret .= "<h2>Available Categories</h2>\n";
 	$ret .= "<ul>\n";
 
 	my($link) = main::path_to_script();
