@@ -302,6 +302,29 @@ sub validate_options
 }
 
 #===============================================================================
+sub email_link {
+	return qq(<a href="http://www.highprogrammer.com/alan/email.html">$_[0]</a>);
+}
+
+#===============================================================================
+sub html_alphaware {
+	my $link = email_link('contact me');
+	return <<ENDIT
+<p><strong>This algorithm is ALPHA grade. This algorithm is not yet well tested and may return wrong answers.</strong>
+Please $link with details if you are receiving incorrect results.
+ENDIT
+}
+
+#===============================================================================
+sub html_betaware {
+	my $link = email_link('contact me');
+	return <<ENDIT;
+<p><strong>This algorithm is BETA grade.  It is tested, but not yet thoroughly.</strong>
+Please $link with details if you are receiving incorrect results.
+ENDIT
+}
+
+#===============================================================================
 sub path_to_script {
 	return $ENV{'SCRIPT_NAME'} || '';
 }
@@ -643,7 +666,7 @@ sub process
 	my $dl = $self->encode_drivers_license
 		($last, $first, $middle, $gender, $yy, $mm, $dd);
 
-	$output = main::format_key_value("Driver's License Number", $dl).
+	$output = main::format_key_value("Driver's License Number", $dl)."<p>".
 		$self->result_notes();
 
 	return(\%error_fields, $error_explain, $output);
@@ -961,7 +984,7 @@ sub format_license {
 		$month_day_gender_code;
 }
 sub result_notes { "" }
-sub describe_more { "<strong>This is a work in progress and not yet complete.</strong>" }
+sub describe_more { main::html_betaware(); }
 
 
 
@@ -993,10 +1016,11 @@ sub female_add { 600 }
 sub month_mult { 31 }
 sub describe {
 	my($link) = main::path_to_script();
+	my $status = main::html_betaware();
 	return <<_EODESC;
 Given an Illinois Driver's License number, determine its owner's
 identity.
-<STRONG>This is a work in progress and is not yet complete.</STRONG>
+$status
 <A HREF="http://www.highprogrammer.com/alan/numbers/dl_us_shared.html">How it works</A>.
 <A HREF="$link/dl_il">Create a fictional number to test</A>.
 _EODESC
@@ -1036,7 +1060,7 @@ sub format_license {
 		$month_day_gender_code;
 }
 sub result_notes { "" }
-sub describe_more { "<strong>This is a work in progress and not yet complete.</strong>" }
+sub describe_more { main::html_betaware(); }
 
 
 
@@ -1067,10 +1091,11 @@ sub female_add { 500 }
 sub month_mult { 40 }
 sub describe {
 	my($link) = main::path_to_script();
+	my $status = main::html_betaware();
 	return <<_EODESC;
 Given a Florida Driver's License number, determine its owner's
 identity.
-<STRONG>This is a work in progress and is not yet complete.</STRONG>
+$status
 <A HREF="http://www.highprogrammer.com/alan/numbers/dl_us_shared.html">How it works</A>.
 <A HREF="$link/dl_fl">Create a fictional number to test</A>.
 _EODESC
@@ -1111,14 +1136,15 @@ probably figure out what it going on.
 
 ENDIT
 }
-sub describe_more { <<ENDIT
+sub describe_more { 
+	my $link = main::email_link('contact me');
+	return <<ENDIT
 
-<strong>This is preliminary work.
-If you can offer any suggestions,
-<a href=\"http://www.highprogrammer.com/alan/email.html\">please contact me</a>.
+<p>
+<strong>This is preliminary and <em>incomplete</em> work.</strong>
+If you can offer any suggestions, please $link.
 Also, given some last names, birthdays, and driver's license numbers, I can
-probably figure out what it going on.
-<a href=\"http://www.highprogrammer.com/alan/email.html\">Please contact me</a> if you're willing to help me in this way.
+probably figure out the remaining information.  If you're willing to help in this way, please $link.
 </strong>
 
 ENDIT
@@ -1188,24 +1214,19 @@ sub new {
 
 sub state_long { 'New Hampshire' }
 sub state_short { 'nh' }
-sub result_notes { <<ENDIT
-
-This is preliminary work.
-<a href=\"http://www.highprogrammer.com/alan/email.html\">Let me know</a> if you find
-problems.
-
+sub result_notes { 
+	my $link= main::email_link('Let me know');
+	return <<ENDIT
 The last digit cannot be determined.  It represents the
 number of people who have the exact same license number as you
 (excepting the last digit) when you got your license.
 
-ENDIT
-}
-sub describe_more { <<ENDIT
-
-<strong>This is preliminary work.</strong>
+<p>This is a preliminary work.
+$link if you find any problems.
 
 ENDIT
 }
+sub describe_more { main::html_alphaware() }
 
 #sub need_last_name { return 1; }
 #sub need_first_name { return 1; }
