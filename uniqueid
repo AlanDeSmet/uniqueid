@@ -1126,53 +1126,158 @@ sub new {
 
 sub state_long { 'Washington' }
 sub state_short { 'wa' }
-sub result_notes { <<ENDIT
-
-This is preliminary work.  Question marks indicate things that I don't yet
-know.  I don't know how to handle last names shorter than 5 letters, and I know
-nothing about the last three digits.
-If you can offer any suggestions,
-<a href=\"http://www.highprogrammer.com/alan/email.html\">please contact me</a>.
-Also, given some last names, birthdays, and driver's license numbers, I can
-probably figure out what it going on.
-<a href=\"http://www.highprogrammer.com/alan/email.html\">Please contact me</a> if you're willing to help me in this way.
-
-ENDIT
-}
-sub describe_more { 
-	my $link = main::email_link('contact me');
+sub result_notes {
+	my $link= main::email_link('Let me know');
 	return <<ENDIT
+<p>Two answers are returned because there are two options for the second
+to last character.  The first answer is probably correct, but if someone
+else already got that number when you applied, you'll have the second
+answer.
 
-<p>
-<strong>This is preliminary and <em>incomplete</em> work.</strong>
-If you can offer any suggestions, please $link.
-Also, given some last names, birthdays, and driver's license numbers, I can
-probably figure out the remaining information.  If you're willing to help in this way, please $link.
-</strong>
+<p>This is a preliminary work.
+$link if you find any problems.
 
 ENDIT
 }
+sub describe_more { main::html_alphaware() }
 
 sub need_last_name { return 1; }
 sub need_first_name { return 1; }
 sub need_middle_initial { return 1; }
 sub need_gender { return 0; }
 sub need_dob_year { return 1; }
-sub need_dob_month { return 0; }
-sub need_dob_day { return 0; }
+sub need_dob_month { return 1; }
+sub need_dob_day { return 1; }
 
 sub toupper {
 		return "\U@_";
 }
 
+# http://www.academic.marist.edu/mwa/wsdln.htm
+#
+# LLLLLFMYYXmd
+# LLLLL - First five letters of last name, padded with * if necessary
+# F - First initial
+# M - Middle initial, * if not avail
+# YY - 100 - two digit year of birth (probably 00 for 1900 or 2000)
+# X - Check digit
+# m - Encoded birth month (Two options!)
+# d - Encoded birth day
+
+sub letter_to_digit {
+	my $self = shift;
+	my($c)= @_;
+	my(%CHARS) = (
+		'*'=>0,
+		'A'=>1,
+		'B'=>2,
+		'C'=>3,
+		'D'=>4,
+		'E'=>5,
+		'F'=>6,
+		'G'=>7,
+		'H'=>8,
+		'I'=>9,
+		'J'=>1,
+		'K'=>2,
+		'L'=>3,
+		'M'=>4,
+		'N'=>5,
+		'O'=>6,
+		'P'=>7,
+		'Q'=>8,
+		'R'=>9,
+		'S'=>2,
+		'T'=>3,
+		'U'=>4,
+		'V'=>5,
+		'W'=>6,
+		'X'=>7,
+		'Y'=>8,
+		'Z'=>9,
+	);
+	return $CHARS{$c};
+}
+
+sub add_checksum {
+	my $self = shift;
+	my($val) = @_;
+	my(@a) = (undef, split(//, $val));
+	my(@orig) = @a;
+	foreach my $c (@a) {
+		$c = $self->letter_to_digit($c);
+	}
+	$orig[10] = ($a[1] - $a[2] + $a[3] - $a[4] + $a[5] - $a[6] + $a[7] - $a[8] + $a[9] - $a[11] + $a[12]) % 10;
+	return join '', @orig;
+
+}
+
+sub encode_day {
+	my $self = shift;
+	my ($day) = @_;
+		# 2 is duplicated?! Can't distinguish 22 and 26!  I suspect typo.
+	my(@DAY_CODE) = qw(
+		BOGUS    
+		A B C D E
+		F G H Z S
+		J K L M N
+		W P Q R O
+		1 2 3 4 5
+		2 7 8 9 T
+		U
+	);
+	return($DAY_CODE[$day]);
+}
+
+sub encode_month {
+	my $self = shift;
+	# Returns two options, the second will be used if the first
+	# is already assigned.
+	my ($month) = @_;
+	if($month > 12 or $month < 1) {
+		return (undef, undef);
+	}
+	my(@MONTH_CODES) = (
+		undef, # dummy 0
+		[qw(B S)], # Jan  1
+		[qw(C T)], # Feb  2
+		[qw(D U)], # Mar  3
+		[qw(J 1)], # Apr  4
+		[qw(K 2)], # May  5
+		[qw(L 3)], # Jun  6
+		[qw(M 4)], # Jul  7
+		[qw(N 5)], # Aug  8
+		[qw(O 6)], # Sep  9
+		[qw(P 7)], # Oct 10
+		[qw(Q 8)], # Nov 11
+		[qw(R 9)], # Dec 12
+		);
+	return(@{$MONTH_CODES[$month]});
+}
+
 sub encode_drivers_license {
 	my $self = shift;
 	my($last, $first, $middle, $gender, $yy, $mm, $dd) = @_;
-	$last = toupper(substr $last."????", 0, 5);
+	$last = toupper(substr $last."****", 0, 5);
+	if(not defined $middle or length $middle < 1) {
+		$middle = '*';
+	}
 	$middle = toupper(substr $middle, 0, 1);
 	$first = toupper(substr $first, 0, 1);
-	$yy = sprintf("%02d",$yy);
-	return "$last$first$middle$yy???";
+	my $yearcal = 100 - $yy;
+	if($yearcal == 100) { $yearcal = 0; }
+	$yy = sprintf("%02d",$yearcal);
+	my($m1, $m2) = $self->encode_month($mm);
+	my $d = $self->encode_day($dd);
+	my $prefix = "$last$first$middle$yy";
+	my $guess1 = "$prefix?$m1$d";
+	my $guess2 = "$prefix?$m2$d";
+		# Possible minor optimization,
+		# I believe that the m1 and m2 are equivalent for the checksum,
+		# so we can calculate it once for guess1 and insert it into guess2.
+	$guess1 = $self->add_checksum($guess1);
+	$guess2 = $self->add_checksum($guess2);
+	return "$guess1 or $guess2";
 }
 
 sub describe {
