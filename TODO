@@ -10,9 +10,6 @@
 
 	- Sublist (contains other items, will be indented)
 
-	- If a "select" data type is "too long" (say, 3 or 4?), 
-	  implement as a drop list.
-
 	- Text (??)
 		- Perhaps an "Extended text field" for all fields?
 

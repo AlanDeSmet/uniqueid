@@ -2932,6 +2932,7 @@ END_FOOTER
 #===============================================================================
 sub get_form_options
 {
+	my $MAX_RADIO_LENGTH = 3;
 	my($uid, $options, $params, $errors) = @_;
 	my(%params) = %{$params};
 	my(%errors) = %{$errors};
@@ -2946,9 +2947,18 @@ sub get_form_options
 		if(defined $name and defined $type) {
 			my($value) = $params{$name} || '';
 			if($type eq 'select') {
-				while(my($label, $key) = each(%{$other[0]})) {
-					my $sel = ($key eq $value) ? ' checked' : '';
-					$ret .= qq(<input type="radio" name="$name" value="$key"$sel> $label<br>);
+				if(scalar keys %{$other[0]} <= $MAX_RADIO_LENGTH) {
+					while(my($label, $key) = each(%{$other[0]})) {
+						my $sel = ($key eq $value) ? ' checked' : '';
+						$ret .= qq(<input type="radio" name="$name" value="$key"$sel> $label<br>);
+					}
+				} else {
+					$ret .= qq(<select name="$name">\n);
+					while(my($label, $key) = each(%{$other[0]})) {
+						my $sel = ($key eq $value) ? ' selected' : '';
+						$ret .= qq(<option value="$key"$sel>$label</option>\n);
+					}
+					$ret .= qq(</select>\n);
 				}
 			} else {
 				# hopefully $type eq 'text'
