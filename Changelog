@@ -3,6 +3,7 @@
   check digit (the 11th digit)
 - Allow no middle name in various driver's license algorithms
 - Fix erroneous middle name encoding for Michigan, Maryland, Minnesota.
+- Form URLs now include algorithm type
 
 0.4.0 - October 11, 2003
 - Fixed typo that generated one digit errors for Washington State licenses for
