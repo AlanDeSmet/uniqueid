@@ -1614,6 +1614,149 @@ _EODESC
 ################################################################################
 
 
+package UniqueID::DriversLicense::NewYork1992;
+@UniqueID::DriversLicense::NewYork1992::ISA = ( "UniqueID::DriversLicense::USShared" );
+
+
+sub new {
+	my $class = shift;
+	$class = ref($class) if ref($class);
+
+	bless my $self = {}, $class;
+
+	return $self;
+}
+
+sub state_long { 'New York (pre 1992)' }
+sub state_short { 'ny92' }
+sub result_notes {
+	return "";
+}
+sub describe_more { 
+	return main::html_alphaware().
+		"<p><STRONG>This algorithm is known to not work!</strong></p>".
+		"<p>This algorithm only works for license numbers prior to September 1992.</p>".
+		"<p><A HREF=\"http://www.highprogrammer.com/alan/numbers/dl_us_ny92.html\">How this works</A>.</p>\n";
+	}
+
+sub need_last_name { return 1; }
+sub need_first_name { return 1; }
+sub need_middle_initial { return 1; }
+sub need_gender { return 1; }
+sub need_dob_year { return 1; }
+sub need_dob_month { return 1; }
+sub need_dob_day { return 1; }
+
+
+sub letter_to_num {
+	local($_) = @_;
+	if(not defined $_) { return 0; }
+	my $ord = ord(uc($_));
+	if($ord > ord('Z') || $ord < ord('A')) {
+		return 0;
+	}
+	return $ord - ord('A') + 1;
+}
+
+# http://www.cis.famu.edu/~riggs/CProg/Prog2Sp02.html
+# 
+# First Name: Alvy
+# Middle Initial: J
+# Last Name: Singer
+# Gender: M
+# Date of Birth: 
+#    Year: 1935
+#    Month: 1
+#    Day: 13
+# S09507457182808935
+
+# Enter your last name: singer
+# Enter your first name: alvy
+# Enter your middle initial: j
+# Your birth year: 1935
+# Your birth month: 1
+# Your birth day: 13
+# Your sex (0 - male, 1-female): 0
+# Your license number is : S09507457182808935
+# 
+# Julia Ho Oct 2, 1950
+# H1498950478563550 (Too short?)
+
+sub encode_drivers_license {
+	my $self = shift;
+	my($last, $first, $middle, $gender, $yy, $mm, $dd) = @_;
+	my($l1, $l2, $l3, $l4, $l5) = split //, $last;
+	my $m1 = substr $middle, 0, 1;
+	my($f1, $f2, $f3) = split //, $first;
+
+	$l1 = uc($l1);
+
+	$l2 = letter_to_num($l2);
+	$l3 = letter_to_num($l3);
+	$l4 = letter_to_num($l4);
+	$l5 = letter_to_num($l5);
+	$m1 = letter_to_num($m1);
+	$f1 = letter_to_num($f1);
+	$f2 = letter_to_num($f2);
+	$f3 = letter_to_num($f3);
+
+	my $x = 385_829_132;
+	if(length $last == 3) {
+		$x = 385_318_778;
+	} elsif(length $last < 3) {
+		$x = 371,539,194;
+	}
+	my $namenum = sprintf "%012.0f",
+		10_017_758_323 * $l2
+		+ 371_538_441 * $l3
+		+ 13_779_585 * $l4
+		+ 510_355 * $l5
+		+ 19_657 * $f1
+		+ 729 * $f2
+		+ 27 * $f3
+		+ $m1
+		+ $x;
+
+	my $dobnum = sprintf "%03d", 63 * $mm + 2 * $dd;
+	if($gender eq 'F') { $dobnum++; }
+	if(length $yy != 2) { $yy = substr $yy, 2, 2; }
+
+	return "$l1$namenum$dobnum?$yy";
+}
+
+sub describe {
+	my $self = shift;
+	my($link) = main::path_to_script();
+	my $state = $self->state_long();
+	my $state_short = $self->state_short();
+	my $state_short_r = $state_short.'r';
+	my $describe_more = $self->describe_more();
+#<A HREF="http://www.highprogrammer.com/alan/numbers/dl_us_shared.html">How it works</A>.
+#<A HREF="$link/dl_$state_short_r">Reverse analyze an existing number</A>.
+	return <<_EODESC;
+Calculate your $state Driver's License number from your
+information.
+$describe_more
+_EODESC
+}
+
+sub result_notes { 
+	return <<ENDIT
+The question mark indicates an overflow digit.  There might not be
+anything there, but if you have the otherwise exact same number as someone
+else that digit will be used to distinguish between you.
+
+ENDIT
+}
+
+
+
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+
+
 package UniqueID::DriversLicense::NewHampshire;
 @UniqueID::DriversLicense::NewHampshire::ISA = ( "UniqueID::DriversLicense::USShared" );
 
@@ -2514,6 +2657,7 @@ add_category(UniqueID::DriversLicense::NewHampshire->new());
 add_category(UniqueID::DriversLicense::Minnesota->new());
 add_category(UniqueID::DriversLicense::Maryland->new());
 add_category(UniqueID::DriversLicense::Michigan->new());
+add_category(UniqueID::DriversLicense::NewYork1992->new());
 add_category(UniqueID::Coding::DLFirstMiddle->new());
 add_category(UniqueID::Coding::MRZPassportReverse->new());
 add_category(UniqueID::Coding::MRZPassport->new());
