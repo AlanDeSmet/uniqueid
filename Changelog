@@ -1,3 +1,7 @@
+- Fixed typo that generated one digit errors for Washington State licenses for
+  people born on the 26th of a month.
+- Added Michigan, Maryland, and Minnesota (They're all the same algorithm)
+
 0.3.0 - October 4, 2003
 - Washington state encoding dramatically improved, now Alpha
 

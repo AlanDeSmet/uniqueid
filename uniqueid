@@ -48,7 +48,7 @@ $CGI::DISABLE_UPLOADS = 1; # There is no reason to accept uploads.
 my $PROGRAM_NAME = 'Unique ID';
 my $VERSION;
 BEGIN {
-	my $ASSIGNED_VERSION = '0.3.0';
+	my $ASSIGNED_VERSION = '0.4.0';
 	my $CVS_VERSION = '$Revision$';
 	my($cvs_bits) = ($CVS_VERSION =~ /Revision: ([\d.]+)/);
 	$VERSION = "$ASSIGNED_VERSION/$cvs_bits";
@@ -578,6 +578,8 @@ sub options
 		if $self->need_first_name();
 	push @options, ['Middle Initial', 'middle', 'text', 1]
 		if $self->need_middle_initial();
+	push @options, ['Middle Name', 'middle', 'text', 40]
+		if $self->need_middle_name();
 	push @options, ['Gender', 'gender', 'radio', ['M', 'F'] ]
 		if $self->need_gender();
 	push @options, ['Date of Birth']
@@ -594,6 +596,7 @@ sub options
 sub need_last_name { return 1; }
 sub need_first_name { return 1; }
 sub need_middle_initial { return 1; }
+sub need_middle_name { return 0; }
 sub need_gender { return 1; }
 sub need_dob_year { return 1; }
 sub need_dob_month { return 1; }
@@ -1164,6 +1167,11 @@ sub toupper {
 # m - Encoded birth month (Two options!)
 # d - Encoded birth day
 
+# Known values:
+# 26 Feb, C6
+# 27 May, K7
+# 18 Jun, LQ
+
 sub letter_to_digit {
 	my $self = shift;
 	my($c)= @_;
@@ -1228,7 +1236,6 @@ sub add_checksum {
 sub encode_day {
 	my $self = shift;
 	my ($day) = @_;
-		# 2 is duplicated?! Can't distinguish 22 and 26!  I suspect typo.
 	my(@DAY_CODE) = qw(
 		BOGUS    
 		A B C D E
@@ -1236,7 +1243,7 @@ sub encode_day {
 		J K L M N
 		W P Q R O
 		1 2 3 4 5
-		2 7 8 9 T
+		6 7 8 9 T
 		U
 	);
 	return($DAY_CODE[$day]);
@@ -1388,8 +1395,517 @@ _EODESC
 }
 
 
+################################################################################
+################################################################################
+################################################################################
+################################################################################
 
 
+# Shared algorithm for MD, MI, and MN
+package UniqueID::DriversLicense::USSharedMDMIMN;
+@UniqueID::DriversLicense::USSharedMDMIMN::ISA = ( "UniqueID::DriversLicense::USShared" );
+
+# Thanks to Joseph Gallian http://www.d.umn.edu/~jgallian/
+
+# Open issue: Minnesota does not encode year of birth.  Do MD or MI?
+
+# Known good data:
+# (From an example)
+# Last Name: Smith
+# First Name: John
+# Middle Name: Bennett
+# Date of Birth: 
+#   Month: 02
+#   Day: 27
+# Driver's License Number: S530-429-085-151
+
+
+
+sub new {
+	my $class = shift;
+	$class = ref($class) if ref($class);
+
+	bless my $self = {}, $class;
+
+	return $self;
+}
+
+sub result_notes { 
+	my $link= main::email_link('Let me know');
+# TODO: Instead of just complaining about it, offer
+# a few results in order of likelyhood.
+	return <<ENDIT
+The last group of three digits might vary slightly.
+If the number you would have been assigned has
+already been assigned, they will add or subtract from
+that last group of numbers to achieve a unique license number.
+
+<p>This is a preliminary work.
+$link if you find any problems.
+
+ENDIT
+}
+sub describe_more { main::html_alphaware() }
+
+#sub need_last_name { return 1; }
+#sub need_first_name { return 1; }
+sub need_middle_initial { return 0; }
+sub need_middle_name { return 1; }
+sub need_gender { return 0; }
+sub need_dob_year { return 0; }
+#sub need_dob_month { return 1; }
+#sub need_dob_day { return 1; }
+
+
+sub encode_drivers_license {
+	my $self = shift;
+	my($last, $first, $middle, $gender, $yy, $mm, $dd) = @_;
+
+	my($q1) = main::soundex($last),
+	my($q2, $q3) = encode_first_middle($first, $middle);
+	my($q4) = encode_month_day($mm, $dd);
+	return "$q1-$q2-$q3-$q4";
+}
+
+sub describe {
+	my $self = shift;
+	my($link) = main::path_to_script();
+	my $state = $self->state_long();
+	my $state_short = $self->state_short();
+	my $state_short_r = $state_short.'r';
+	my $describe_more = $self->describe_more();
+#<A HREF="http://www.highprogrammer.com/alan/numbers/dl_us_shared.html">How it works</A>.
+#<A HREF="$link/dl_$state_short_r">Reverse analyze an existing number</A>.
+	return <<_EODESC;
+Calculate your $state Driver's License number from your
+information.
+$describe_more
+_EODESC
+}
+
+
+{
+my %table;
+# TODO: Return list of options:
+# If the license number collides, the person is assigned the next largest
+# date number that is _not_ taken by the next date.  If those run out,
+# take go downward instead.  No idea what happens if you hit the previous
+# date's number.
+sub encode_month_day {
+	my($mm, $dd) = @_;
+	if(not exists $table{'01-01'}) {
+		%table = build_month_day_table();
+	}
+	my $key = sprintf "%02d-%02d", $mm, $dd;
+	if(exists $table{$key}) {
+		return $table{$key};
+	}
+	return '???';
+}
+}
+
+sub validate_month_day_table {
+	my(%table) = @_;
+	my $previous = 0;
+	foreach my $month (1..12) {
+		foreach my $day (1..31) {
+			my $key = sprintf "%02d-%02d", $month, $day;
+			last if not exists $table{$key};
+			if(($previous + 1) >= $table{$key} ) {
+				die "$key is $table{$key} (previous is $previous)";
+			}
+		}
+	}
+	my(@dates) = sort keys %table;
+	if(@dates != 366) {
+		die "Not enough dates";
+	}
+	if($dates[0] ne '01-01') {
+		die "First date is $dates[0], not 01-01";
+	}
+	if($dates[365] ne '12-31') {
+		die "Last date is $dates[365], not 12-31";
+	}
+}
+
+sub build_month_day_table {
+	# Bow before The Chart of DOOOOOM!
+	# This table fills me with sadness.  TODO: Find an algorithm to generate.
+	# The pattern is _soooo_ close to being simple... grrr.
+	return (
+		# January 001
+	    '01-01' => '002',
+	'01-02' => '007', '01-03' => '010', '01-04' => '012',
+	'01-05' => '017', '01-06' => '020', '01-07' => '022', '01-08' => '025',
+	'01-09' => '027', '01-10' => '030', '01-11' => '032', '01-12' => '035',
+	'01-13' => '037', '01-14' => '040', '01-15' => '042', '01-16' => '045',
+	'01-17' => '047', '01-18' => '050', '01-19' => '052', '01-20' => '055',
+	'01-21' => '057', '01-22' => '060', '01-23' => '062', '01-24' => '065',
+	'01-25' => '067', '01-26' => '070', '01-27' => '072', '01-28' => '075',
+	'01-29' => '077', '01-30' => '080', '01-31' => '082', # Next      085
+		# February 085
+	'02-01' => '086', '02-02' => '088', '02-03' => '091', '02-04' => '093',
+	'02-05' => '096', '02-06' => '098', '02-07' => '101', '02-08' => '103',
+	'02-09' => '106', '02-10' => '108', '02-11' => '111', '02-12' => '113',
+	'02-13' => '116', '02-14' => '118', '02-15' => '121', '02-16' => '123',
+	'02-17' => '126', '02-18' => '128', '02-19' => '131', '02-20' => '133',
+	'02-21' => '136', '02-22' => '138', '02-23' => '141', '02-24' => '143',
+	'02-25' => '146', '02-26' => '148', '02-27' => '151', '02-28' => '153',
+	'02-29' => '156', # Next      158
+		# March 158
+	'03-01' => '159', '03-02' => '162', '03-03' => '164', '03-04' => '167',
+	'03-05' => '169', '03-06' => '172', '03-07' => '174', '03-08' => '177',
+	                  '03-09' => '182', '03-10' => '184', '03-11' => '187',
+	'03-12' => '189', '03-13' => '192', '03-14' => '194', '03-15' => '197',
+	'03-16' => '199', '03-17' => '202', '03-18' => '204', '03-19' => '207',
+	                                                      '03-20' => '227',
+	'03-21' => '229', '03-22' => '232', '03-23' => '234', '03-24' => '237',
+	'03-25' => '239', '03-26' => '242', '03-27' => '244', '03-28' => '247',
+	'03-29' => '249', '03-30' => '252', '03-31' => '254', # Next      257
+		# April 257
+	'04-01' => '258', '04-02' => '260', '04-03' => '263', '04-04' => '265',
+	'04-05' => '268', '04-06' => '270', '04-07' => '273', '04-08' => '275',
+	'04-09' => '278', '04-10' => '280', '04-11' => '283', '04-12' => '285',
+	'04-13' => '288', '04-14' => '290', '04-15' => '293', '04-16' => '295',
+	'04-17' => '298', '04-18' => '300', '04-19' => '303', '04-20' => '305',
+	'04-21' => '308', '04-22' => '310', '04-23' => '313', '04-24' => '315',
+	'04-25' => '318', '04-26' => '320', '04-27' => '323', '04-28' => '325',
+	'04-29' => '328', '04-30' => '330', # Next      333
+		# May 333
+	'05-01' => '334', '05-02' => '336', '05-03' => '339', '05-04' => '341',
+	'05-05' => '344', '05-06' => '346', '05-07' => '349', '05-08' => '351',
+	'05-09' => '354', '05-10' => '356', '05-11' => '359', '05-12' => '361',
+	'05-13' => '364', '05-14' => '366', '05-15' => '369', '05-16' => '371',
+	'05-17' => '374', '05-18' => '376', '05-19' => '379', '05-20' => '381',
+	'05-21' => '384', '05-22' => '386', '05-23' => '389', '05-24' => '391',
+	'05-25' => '394', '05-26' => '396', '05-27' => '399', '05-28' => '401',
+	'05-29' => '404', '05-30' => '406', '05-31' => '409', # Next      411
+		# June 411
+	'06-01' => '412', '06-02' => '415', '06-03' => '417', '06-04' => '420',
+	'06-05' => '422', '06-06' => '425', '06-07' => '427', '06-08' => '430',
+	'06-09' => '432', '06-10' => '435', '06-11' => '437', '06-12' => '440',
+	'06-13' => '442', '06-14' => '445', '06-15' => '447', '06-16' => '450',
+	'06-17' => '452',                   '06-18' => '467', '06-19' => '470',
+	'06-20' => '472', '06-21' => '475', '06-22' => '477', '06-23' => '480',
+	'06-24' => '482',                   '06-25' => '497', '06-26' => '500',
+	'06-27' => '502', '06-28' => '505', '06-29' => '507',
+	                                    '06-30' => '517', # Next      530
+		# July 520
+	  '07-01' => '521',
+	    '07-02' => '523',
+	      '07-03' => '526',
+	        '07-04' => '528',
+	'07-05' => '534', '07-06' => '537', '07-07' => '539', '07-08' => '542',
+	'07-09' => '544', '07-10' => '547', '07-11' => '549', '07-12' => '552',
+	'07-13' => '554', '07-14' => '557', '07-15' => '559', '07-16' => '562',
+	'07-17' => '564', '07-18' => '567', '07-19' => '569', '07-20' => '572',
+	'07-21' => '574', '07-22' => '577', '07-23' => '579', '07-24' => '582',
+	'07-25' => '584', '07-26' => '587', '07-27' => '589', '07-28' => '592',
+	'07-29' => '594', '07-30' => '597', '07-31' => '599', # Next      602
+		# August 602
+	                  '08-01' => '603', '08-02' => '605', '08-03' => '508',
+	'08-04' => '610', '08-05' => '613', '08-06' => '615', '08-07' => '618',
+	'08-08' => '620', '08-09' => '623', '08-10' => '625', '08-11' => '628',
+	'08-12' => '630', '08-13' => '633', '08-14' => '635', '08-15' => '638',
+	'08-16' => '640', '08-17' => '643', '08-18' => '645', '08-19' => '648',
+	'08-20' => '650', '08-21' => '653', '08-22' => '655', '08-23' => '658',
+	'08-24' => '660', '08-25' => '663', '08-26' => '665', '08-27' => '668',
+	'08-28' => '670', '08-29' => '673', '08-30' => '675', '08-31' => '678',
+    # Next      680
+		# September 680
+	'09-01' => '681', '09-02' => '684', '09-03' => '686', '09-04' => '689',
+	'09-05' => '691', '09-06' => '694', '09-07' => '696', '09-08' => '699',
+	'09-09' => '701', '09-10' => '704', '09-11' => '706', '09-12' => '709',
+	'09-13' => '711', '09-14' => '714', '09-15' => '716', '09-16' => '719',
+	'09-17' => '721', '09-18' => '724', '09-19' => '726', '09-20' => '729',
+	'09-21' => '731', '09-22' => '734', '09-23' => '736', '09-24' => '739',
+	'09-25' => '741', '09-26' => '744', '09-27' => '746', '09-28' => '749',
+	'09-29' => '751', '09-30' => '754', # Next      756
+		# October 756
+	'10-01' => '757', '10-02' => '760', '10-03' => '762', '10-04' => '765',
+	'10-05' => '767', '10-06' => '770', '10-07' => '772', '10-08' => '775',
+	'10-09' => '777', '10-10' => '780', '10-11' => '782', '10-12' => '785',
+	'10-13' => '787', '10-14' => '790', '10-15' => '792',
+	'10-16' => '797', '10-17' => '800', '10-18' => '802',
+	'10-19' => '807', '10-20' => '810', '10-21' => '812', '10-22' => '815',
+	'10-23' => '817', '10-24' => '820', '10-25' => '822', '10-26' => '825',
+	'10-27' => '827', '10-28' => '830', '10-29' => '832', '10-30' => '835',
+	'10-31' => '837', # Next      840
+		# November 840
+	'11-01' => '841', '11-02' => '843', '11-03' => '846', '11-04' => '848',
+	'11-05' => '851', '11-06' => '853', '11-07' => '856', '11-08' => '858',
+	'11-09' => '861', '11-10' => '863', '11-11' => '866', '11-12' => '868',
+	'11-13' => '871', '11-14' => '873', '11-15' => '876', '11-16' => '878',
+	'11-17' => '881', '11-18' => '883', '11-19' => '886', '11-20' => '888',
+	'11-21' => '891', '11-22' => '893', '11-23' => '896', '11-24' => '898',
+	'11-25' => '901', '11-26' => '903', '11-27' => '906', '11-28' => '908',
+	'11-29' => '911', '11-30' => '913', # Next      916
+		# December 916
+	'12-01' => '917', '12-02' => '919', '12-03' => '922', '12-04' => '924',
+	'12-05' => '927', '12-06' => '929', '12-07' => '932', '12-08' => '934',
+	'12-09' => '937', '12-10' => '939', '12-11' => '942', '12-12' => '944',
+	'12-13' => '947', '12-14' => '949', '12-15' => '952', '12-16' => '954',
+	'12-17' => '957', '12-18' => '959', '12-19' => '962', '12-20' => '964',
+	'12-21' => '967', '12-22' => '969', '12-23' => '972', '12-24' => '974',
+	'12-25' => '977',
+	    '12-26' => '983', '12-27' => '985',
+	          '12-28' => '990',
+	    '12-29' => '993', '12-30' => '995',
+	       '12-31' => '998',
+	);
+}
+
+sub encode_first_middle {
+	my($first, $middle) = @_;
+	$first =~ tr[A-Z][a-z];
+	$middle =~ tr[A-Z][a-z];
+	my($first_encoded, $first_next) = encode_name($first);
+	my($middle_encoded);
+	if(defined $middle and length $middle) {
+		($middle_encoded) = encode_name($middle);
+	} else {
+		my(%table) = (
+			'a'=>'001', 'b'=>'002', 'c'=>'003', 'd'=>'004', 'e'=>'005', 
+			'f'=>'006', 'g'=>'007', 'h'=>'008', 'i'=>'009', 'j'=>'010',
+			'k'=>'011', 'l'=>'012', 'm'=>'013', 'n'=>'014', 'o'=>'015',
+			'p'=>'016', 'q'=>'017', 'r'=>'018', 's'=>'019', 't'=>'020',
+			'u'=>'021', 'v'=>'022', 'w'=>'023', 'x'=>'024', 'y'=>'025',
+			'z'=>'026',
+		);
+		if(not defined $first_next) {
+			$middle_encoded = '000';
+		} elsif(exists $table{$first_next}) {
+			$middle_encoded = $table{$first_next};
+		} else {
+			$middle_encoded = '???';
+		}
+	}
+	return($first_encoded, $middle_encoded);
+}
+
+{
+my %table;
+sub encode_name {
+	my($name) = @_;
+	if(not exists $table{'a'}) {
+		%table = build_name_encoding_table();
+	}
+	if(exists $table{$name}) {
+		return($table{$name}, '');
+	}
+	my $next = substr $name, 3, 1;
+	$name = substr $name, 0, 3;
+	if(exists $table{$name}) {
+		return($table{$name}, $next);
+	}
+	$next = substr $name, 2, 1;
+	$name = substr $name, 0, 2;
+	if(exists $table{$name}) {
+		return($table{$name}, $next);
+	}
+	return ('???', undef);
+}
+}
+
+sub dump_name_encoding_table {
+	my(%table) = @_;
+	foreach my $key (sort keys %table) {
+		print "$key -> $table{$key}\n";
+	}
+}
+
+sub validate_name_encoding_table {
+	my(%table) = @_;
+	my %numbers;
+	foreach my $name (keys %table) {
+		my $num = $table{$name};
+		if(exists $numbers{$num}) {
+			die "$num used for $numbers{$num} and $name}";
+		}
+		$numbers{$num} = $name;
+	}
+	my(@nums) = sort keys %numbers;
+	if(@nums != (999-26)) {
+		die "Not enough entries in table";
+	}
+	if($nums[0] != 27) {
+		die "Table doesn't start with 27";
+	}
+	if($nums[$#nums] != 999) {
+		die "Table doesn't end with 999";
+	}
+	sub check {
+		my($table, $letter, $value) = @_;
+		if($table->{$letter} != $value) {
+			die "$letter doesn't map to $value";
+		}
+	}
+	check(\%table, 'a', 27);
+	check(\%table, 'dn', 148);
+	check(\%table, 'edn', 179);
+	check(\%table, 'elv', 224);
+	check(\%table, 'h', 297);
+	check(\%table, 'jad', 357);
+	check(\%table, 'jom', 434);
+	check(\%table, 'mav', 591);
+	check(\%table, 'ml', 606);
+	check(\%table, 'nz', 647);
+	check(\%table, 'margaret', 586);
+	check(\%table, 'qb', 704);
+	check(\%table, 'sq', 774);
+	check(\%table, 'vk', 849);
+	check(\%table, 'william', 887);
+	check(\%table, 'zm', 986);
+	return 1;
+}
+
+
+sub build_name_encoding_table {
+	sub simple_range {
+		my($table, $letter, $start, $stop) = @_;
+		add_map($table, $letter, $start);
+		fill($table, $letter.'a', $letter.'z', $start+1, $stop);
+	}
+	sub fill {
+		my($table, $l1, $l2, $n1, $n2, $skips) = @_;
+		my($orig_l, $orig_n) = ($l1, $n1);
+		my($last_l, $last_n);
+		while($n1 <= $n2) {
+			while(exists $skips->{$n1}) {
+				add_map($table, $skips->{$n1}, $n1);
+				$n1++;
+			}
+			if(exists $table->{$l1}) {
+				die "$l1 -> $n1 cannot be mapped, already $table->{$l1}\n";
+			}
+			add_map($table, $l1, $n1);
+			$last_l = $l1;
+			$last_n = $n1;
+
+			# Shift to next letter combination.
+			my(@l1) = split //, $l1;
+			$l1[$#l1] =~ tr[a-zA-Z][b-zaB-ZA];
+			$l1 = join '', @l1;
+
+			$n1++;
+		}
+		if($last_l ne $l2 or $last_n != $n2) {
+			die "Mismatch in range $orig_l-$l2 $orig_n-$n2. Ended at $l1, $n1\n";
+		}
+	}
+
+	sub add_map {
+		my($map, $key, $val) = @_;
+		if(exists $map->{$key}) {
+			die "Cannot add $key -> $val to map, already -> $map->{$key}\n";
+		}
+		$map->{$key} = sprintf("%03d", $val);
+		#print "$key -> $val\n";
+	}
+
+
+	# Strictly speaking, is ellena coded as "ellen" or "ell"?
+	# Lazy solution (if I don't want to tag each entry as full or partial),
+	# if length > 3, then full.
+	my(%t);
+	add_map(\%t, 'a', 27);
+	fill(\%t, 'aa', 'al', 28, 39);
+	fill(\%t, 'ala', 'alz', 40, 65);
+	fill(\%t, 'am', 'az', 66, 79);
+	simple_range(\%t, 'b', 80, 106);
+	simple_range(\%t, 'c', 107, 133);
+	simple_range(\%t, 'd', 134, 160);
+	add_map(\%t, 'e', 161);
+	fill(\%t, 'ea', 'ed', 162, 165);
+	fill(\%t, 'eda', 'edz', 166, 192, {189=>'edward'});
+	fill(\%t, 'ee', 'el', 193, 200);
+	fill(\%t, 'ela', 'elz', 201, 228, {210 => 'elizabeth', 214 => 'ellen'});
+	fill(\%t, 'em', 'ez', 229, 242);
+	simple_range(\%t, 'f', 243, 269);
+	simple_range(\%t, 'g', 270, 296);
+	add_map(\%t, 'h', 297);
+	fill(\%t, 'ha', 'hz', 298, 324, {303=>'henry'});
+	simple_range(\%t, 'i', 325, 351);
+	add_map(\%t, 'j', 352);
+	add_map(\%t, 'ja', 353);
+	fill(\%t, 'jaa', 'jaz', 354, 380, {376=>'james'});
+	fill(\%t, 'jb', 'je', 381, 384);
+	fill(\%t, 'jea', 'jez', 385, 410, {376=>'james'});
+	fill(\%t, 'jf', 'jo', 411, 420);
+	fill(\%t, 'joa', 'joz', 421, 448, {429=>'john', 441=>'joseph'});
+	fill(\%t, 'jp', 'jz', 449, 459);
+	simple_range(\%t, 'k', 460, 486);
+	add_map(\%t, 'l', 487);
+	fill(\%t, 'la', 'le', 488, 492);
+	fill(\%t, 'lea', 'lez', 493, 518);
+	fill(\%t, 'lf', 'lo', 519, 528);
+	fill(\%t, 'loa', 'loz', 529, 554);
+	fill(\%t, 'lp', 'lz', 555, 565);
+	add_map(\%t, 'm', 566);
+	add_map(\%t, 'ma', 567);
+	fill(\%t, 'maa', 'maz', 568, 595, {586=>'margaret', 587=>'mary'});
+	fill(\%t, 'mb', 'mz', 596, 620);
+	simple_range(\%t, 'n', 621, 647);
+	simple_range(\%t, 'o', 648, 674);
+	simple_range(\%t, 'p', 675, 701);
+	simple_range(\%t, 'q', 702, 728);
+	add_map(\%t, 'r', 729);
+	fill(\%t, 'ra', 'rz', 730, 756, {745=>'robert'});
+	simple_range(\%t, 's', 757, 783);
+	simple_range(\%t, 't', 784, 810);
+	simple_range(\%t, 'u', 811, 837);
+	simple_range(\%t, 'v', 838, 864);
+	add_map(\%t, 'w', 865);
+	fill(\%t, 'wa', 'wi', 866, 874);
+	fill(\%t, 'wia', 'wiz', 875, 901, {887=>'william'});
+	fill(\%t, 'wj', 'wz', 902, 918);
+	simple_range(\%t, 'x', 919, 945);
+	simple_range(\%t, 'y', 946, 972);
+	simple_range(\%t, 'z', 973, 999);
+
+	return %t;
+}
+
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+
+
+package UniqueID::DriversLicense::Minnesota;
+@UniqueID::DriversLicense::Minnesota::ISA = ( "UniqueID::DriversLicense::USSharedMDMIMN" );
+
+sub state_long { 'Minnesota' }
+sub state_short { 'mn' }
+
+
+
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+
+
+package UniqueID::DriversLicense::Michigan;
+@UniqueID::DriversLicense::Michigan::ISA = ( "UniqueID::DriversLicense::USSharedMDMIMN" );
+
+sub state_long { 'Michigan' }
+sub state_short { 'mi' }
+
+
+
+
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+
+
+package UniqueID::DriversLicense::Maryland;
+@UniqueID::DriversLicense::Maryland::ISA = ( "UniqueID::DriversLicense::USSharedMDMIMN" );
+
+sub state_long { 'Maryland' }
+sub state_short { 'md' }
 
 
 ################################################################################
@@ -1416,6 +1932,9 @@ add_category(UniqueID::DriversLicense::Florida->new());
 add_category(UniqueID::DriversLicense::FloridaReverse->new());
 add_category(UniqueID::DriversLicense::Washington->new());
 add_category(UniqueID::DriversLicense::NewHampshire->new());
+add_category(UniqueID::DriversLicense::Minnesota->new());
+add_category(UniqueID::DriversLicense::Maryland->new());
+add_category(UniqueID::DriversLicense::Michigan->new());
 add_category(UniqueID::Coding::DLFirstMiddle->new());
 
 
