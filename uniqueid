@@ -1,0 +1,411 @@
+#! /usr/bin/perl -wT
+
+use CGI qw(param);
+use strict;
+
+# TODO: This is buggy.  Get better implementation. Text::Soundex?
+sub soundex
+{
+	local($_) = @_;
+	my($f, $fc);
+
+	tr/a-z/A-Z/;
+	tr/A-Z//cd;
+
+	if($_ eq '') { return(''); }
+
+	($f) = /^(.)/;
+	tr/AEHIOUWYBFPVCGJKQSXZDTLMNR/00000000111122222222334556/;
+	($fc) = /^(.)/;
+	s/^$fc+//;
+	tr///cs;
+	tr/0//d;
+	$_ = $f . $_ . '000';
+	s/^(.{4}).*/$1/;
+	return($_);
+}
+
+sub validate_options
+{
+	my($params, $options) = @_;
+	my(%params) = %{$params};
+	my(@options) = @{$options};
+	my($error, %error) = ('');
+	foreach my $option (@options) {
+		my($name, $key) = @{$option};
+		next if not defined $key or not length $key;
+		my($value) = $params{$key};
+		if(not defined $value or not length $value) {
+			if(not defined $error{$key}) {
+				$error{$key} = '';
+			}
+			$error{$key} .= "Please specify $name. ";
+		}
+	}
+	return ($error, %error);
+}
+
+
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+
+
+
+
+
+package UniqueID::DriversLicense::Wisconsin;
+
+sub new {
+	my $class = shift;
+	$class = ref($class) if ref($class);
+
+	bless my $self = {}, $class;
+
+	return $self;
+}
+
+sub uid { 'dl_wi' }
+sub display_name { "Wisconsin Driver's License" }
+sub describe {
+	return <<_EODESC;
+Calculate your Wisconsin Driver's License number from your
+information.
+<A HREF="http://www.highprogrammer.com/alan/numbers/dl_wi/">How it works</A>.
+_EODESC
+#'
+}
+
+sub options
+{
+	return(
+		['Last Name', 'last', 'text', 40],
+		['First Name', 'first', 'text', 40],
+		['Middle Initial', 'middle', 'text', 1],
+		['Gender', 'gender', 'radio', ['M', 'F'] ],
+		['Date of Birth'],
+		[' Year', 'y', 'text', 4],
+		[' Month', 'm', 'text', 2],
+		[' Day', 'd', 'text', 2],
+	);
+}
+
+sub process
+{
+	my($self) = shift;
+	my(%params) = @_;
+	my($last) = $params{'last'};
+	my($first) = $params{'first'};
+	my($middle) = $params{'middle'};
+	my($gender) = uc($params{'gender'});
+	my($yy) = $params{'y'};
+	my($mm) = $params{'m'};
+	my($dd) = $params{'d'};
+	my(%error_fields, $error_explain, $output);
+
+	($error_explain, %error_fields) =
+		main::validate_options(\%params, [$self->options()]);
+
+	$yy -= 1900 if $yy >= 1900 and $yy < 2000;
+	$yy -= 2000 if $yy >= 2000 and $yy < 2100;
+
+	if($yy > 99 or $yy < 0) {
+		$error_fields{'y'} .= 'Please specify year of birth as a one or '.
+			'two digit number. '.
+			'For example, for 1975 specify "75", for 2006 specify "6".';
+	}
+	if($mm > 12 or $mm < 1) {
+		$error_fields{'m'} .= 'Please specify month of birth as a '.
+			'number from 1 to 12. '.
+			'For example, for January specify "1", for December specify "12".';
+	}
+	if($dd > 31 or $dd < 1) {
+		$error_fields{'d'} .= 'Please specify day of birth as a '.
+			'number from 1 to 31.';
+	}
+	if($gender ne 'M' and $gender ne 'F') {
+		$error_fields{'gender'} .= 'Please specify gender.';
+	}
+	
+	if((defined $error_explain and length $error_explain) or
+		scalar keys %error_fields){
+		return(\%error_fields, $error_explain, $output);
+	}
+
+	$middle = substr $middle, 0, 1;
+	my($YearTens, $YearOnes) = split(//,sprintf("%02d",$yy));
+
+	my $dl = main::soundex($last).'-'.
+		first_name_middle_init($first, $middle).
+		$YearTens.'-'.$YearOnes.
+		month_day_gender($mm, $dd, $gender).'-??';
+	
+	$output = "<STRONG>$dl</STRONG><P>".
+	"The last two digits cannot be determined.  They represent the ".
+	"number of people who have the exact same license number as you ".
+	"(excepting the last two digits), when you got your license.";
+	
+
+
+	return(\%error_fields, $error_explain, $output);
+}
+
+sub month_day_gender
+{
+	my($Month, $Day, $Gender) = @_;
+	my($DateNo);
+	$Gender = uc($Gender);
+
+	$DateNo = ($Month - 1) * 40 + $Day;
+	if($Gender eq 'F') { $DateNo += 500; }
+
+	$DateNo = sprintf("%03d",$DateNo);
+
+	return($DateNo);
+}
+
+
+sub first_name_middle_init
+{
+	my($FN, $MiddleInit) = @_;
+	my($NameNum, %FirstNameLookup, %FirstInitLookup, %MiddleInitLookup);
+	my($Return);
+
+	$FN = uc($FN);
+	$MiddleInit = uc($MiddleInit);
+
+	%FirstNameLookup =
+	(
+		'ALBERT'	=> 20, 'ALICE'		=> 20,
+		'ANN'		=> 40, 'ANNE'		=> 40, 'ANNA'		=> 40,
+		'ANNIE'		=> 40, 'ARTHUR'	=> 40,
+		'BERNARD'	=> 80, 'BETTY'		=> 80, 'BETTE'		=> 80,
+		'BETTIE'	=> 80,
+		'CARL'		=> 120, 'CATHERINE'	=> 120,
+		'CHARLES'	=> 140, 'CLARA'		=> 140,
+		'DONALD'	=> 180, 'DOROTHY'	=> 180,
+		'EDWARD'	=> 220, 'ELIZABETH'	=> 220,
+		'FLORENCE'	=> 260, 'FRANK'		=> 260,
+		'GEORGE'	=> 300, 'GRACE'		=> 300,
+		'HAROLD'	=> 340, 'HARRIET'	=> 340,
+		'HARRY'		=> 360, 'HAZEL'		=> 360,
+		'HELEN'		=> 380, 'HENRY'		=> 380,
+		'JAMES'		=> 440, 'JANE'		=> 440, 'JAYNE'		=> 440,
+		'JEAN'		=> 460, 'JOHN'		=> 460,
+		'JOAN'		=> 480, 'JOSEPH'	=> 480,
+		'MARGARET'	=> 560, 'MARTIN'	=> 560,
+		'MARVIN'	=> 580, 'MARY'		=> 580,
+		'MELVIN'	=> 600, 'MILDRED'	=> 600,
+		'PATRICIA'	=> 680, 'PAUL'		=> 680,
+		'RICHARD'	=> 740, 'RUBY'		=> 740,
+		'ROBERT'	=> 760, 'RUTH'		=> 760,
+		'THELMA'	=> 820, 'THOMAS'	=> 820,
+		'WALTER'	=> 900, 'WANDA'		=> 900,
+		'WILLIAM'	=> 920, 'WILMA'		=> 920,
+	);
+
+	%FirstInitLookup =
+	(
+		'A' =>   0, 'B' =>  60, 'C' => 100, 'D' => 160, 'E' => 200, 'F' => 240,
+		'G' => 280, 'H' => 320, 'I' => 400, 'J' => 420, 'K' => 500, 'L' => 520,
+		'M' => 540, 'N' => 620, 'O' => 640, 'P' => 660, 'Q' => 700, 'R' => 720,
+		'S' => 780, 'T' => 800, 'U' => 840, 'V' => 860, 'W' => 880, 'X' => 940,
+		'Y' => 960, 'Z' => 980,
+	);
+
+	%MiddleInitLookup =
+	(
+		'A' =>  1, 'B' =>  2, 'C' =>  3, 'D' =>  4, 'E' =>  5, 'F' =>  6,
+		'G' =>  7, 'H' =>  8, 'I' =>  9, 'J' => 10, 'K' => 11, 'L' => 12,
+		'M' => 13, 'N' => 14, 'O' => 14, 'P' => 15, 'Q' => 15, 'R' => 16,
+		'S' => 17, 'T' => 18, 'U' => 18, 'V' => 18, 'W' => 19, 'X' => 19,
+		'Y' => 19, 'Z' => 19,
+	);
+
+	if(defined($FirstNameLookup{$FN}))
+		{ $NameNum = $FirstNameLookup{$FN}; }
+	elsif(defined($FirstInitLookup{(split(//,$FN))[0]}))
+		{ $NameNum = $FirstInitLookup{(split(//,$FN))[0]}; }
+	else
+		{ return('BAD'); }
+
+	if(defined($MiddleInitLookup{$MiddleInit}))
+		{ $NameNum += $MiddleInitLookup{$MiddleInit}; }
+	else
+		{ return('BAD'); }
+
+	$Return = sprintf("%03d",$NameNum);
+
+	return($Return);
+}
+
+
+
+
+
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+
+
+
+
+package main;
+
+my(%CATEGORIES);
+$CATEGORIES{UniqueID::DriversLicense::Wisconsin::uid()} =
+	UniqueID::DriversLicense::Wisconsin->new();
+
+main();
+exit;
+
+
+#===============================================================================
+sub main
+{
+	print "Content-type: text/html\n\n";
+
+	my($category) = param('type');
+	if(not defined $category)
+	{
+		print get_header();
+		print get_footer();
+		return;
+	}
+
+	my($impl) = $CATEGORIES{$category};
+	if(not defined $impl)
+	{
+		print get_header();
+		print "error, bad category $category\n";
+		print get_footer();
+		return;
+	}
+
+
+	my(@params) = param();
+	my %params;
+	foreach my $p (@params)
+	{
+		$params{$p} = param($p);
+	}
+
+	my($step) = param('step');
+	if(not defined $step)
+	{
+		print get_header();
+		print get_impl_form($impl, \%params, {});
+		print get_footer();
+		return;
+	}
+
+	print get_header();
+	my($error_fields, $error_explain, $output) =
+		$impl->process(%params);
+	print "$output \n";
+	print "$error_explain\n";
+	print "<HR>\n";
+	print get_impl_form($impl, \%params, $error_fields);
+	print get_footer();
+}
+
+
+#===============================================================================
+sub get_impl_form {
+	my($impl, $params, $error_fields) = @_;
+	my $ret = '';
+	$ret .= '<H2>'.
+		$impl->display_name().
+		'</H2>'.
+		$impl->describe().
+		get_form_header().
+		get_form_options($impl->uid(), [$impl->options()], $params, $error_fields).
+		get_form_footer().
+		'';
+
+}
+
+#===============================================================================
+sub get_header
+{
+	my $ret = '';
+	$ret .= <<_EOHEADER;
+<HTML>
+<HEAD>
+<TITLE>Unique ID</TITLE>
+</HEAD>
+<BODY>
+<H1>Unique ID</H1>
+_EOHEADER
+	$ret .= get_form_header();
+	$ret .= qq(<SELECT NAME="type">\n);
+	foreach my $key (sort keys %CATEGORIES)
+	{
+		my $name = $CATEGORIES{$key}->display_name();
+		$ret .= qq(<OPTION VALUE="$key">$name</OPTION>\n);
+	}
+	$ret .= qq(</SELECT>\n);
+	$ret .= get_form_footer('Change category');
+	$ret .= "<HR>\n";
+	return $ret;
+}
+#===============================================================================
+sub get_form_header
+{
+	my($path) = $ENV{'SCRIPT_NAME'};
+	return qq(<FORM ACTION="$path" METHOD=GET>\n);
+}
+#===============================================================================
+sub get_form_footer
+{
+	my($label) = @_;
+	$label ||= 'Submit';
+	return qq(<INPUT TYPE="SUBMIT" VALUE="$label">\n</FORM>\n);
+}
+#===============================================================================
+sub get_footer
+{
+	return "</BODY>\n</HTML>\n";
+}
+
+#===============================================================================
+sub get_form_options
+{
+	my($uid, $options, $params, $errors) = @_;
+	my(%params) = %{$params};
+	my(%errors) = %{$errors};
+	my($ret) = '';
+	$ret .= qq(<INPUT TYPE="HIDDEN" NAME="type" VALUE="$uid">);
+	$ret .= qq(<INPUT TYPE="HIDDEN" NAME="step" VALUE="1">);
+	$ret .= "<TABLE>\n";
+	foreach my $option (@{$options}) {
+		my($label, $name, $type, @other) = @{$option};
+		my($indent) = ($label =~ /^( *)/);
+		$indent =~ s/ /\&nbsp;\&nbsp;\&nbsp;/g;
+		$label =~ s/^ */$indent/g;
+		$ret .= "<TR>";
+		$ret .= qq(<TD>$label</TD><TD>);
+		if(defined $name and defined $type) {
+			my($value) = $params{$name} || '';
+			if($type eq 'radio') {
+				foreach my $entry (@{$other[0]}) {
+					my $sel = ($entry eq $value) ? ' CHECKED' : '';
+					$ret .= qq(<INPUT TYPE="RADIO" NAME="$name" VALUE="$entry"$sel> $entry<BR>);
+				}
+			} else {
+				# hopefully $type eq 'text'
+				my($length) = $other[0] || 10;
+				$ret .= qq(<INPUT TYPE="TEXT" NAME="$name" VALUE= "$value" SIZE="$length">);
+			}
+		}
+		$ret .= "<TD>";
+		if(defined $errors{$name}) {
+			$ret .= "Error: $errors{$name}";
+		}
+		$ret .= "</TD></TR>\n";
+	}
+	$ret .= "</TABLE>\n";
+	return $ret;
+}
