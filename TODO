@@ -13,6 +13,10 @@
 	- Allow radio boxes to have different labels from values
 
 	- Drop list support
+		- Ooooh, better idea, change radio to "choice", let UI
+		  code look at (scalar(@options)) to decide if list is
+		  long enough to justify a drop list, otherwise radio.
+		  Keen!
 
 	- Text (??)
 		- Perhaps an "Extended text field" for all fields?
