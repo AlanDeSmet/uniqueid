@@ -14,7 +14,7 @@ use Text::Soundex;
 use strict;
 
 #===============================================================================
-my(%DLFM_FIRST_MALE) = (
+my(%DLFMR_FIRST_MALE) = (
 	20=>['Albert'], 40=>['Arthur'], 80=>['Bernard'], 120=>['Carl'],
 	140=>['Charles'], 180=>['Donald'], 220=>['Edward'], 260=>['Frank'],
 	300=>['George'], 340=>['Harold'], 360=>['Harry'], 380=>['Henry'],
@@ -22,7 +22,7 @@ my(%DLFM_FIRST_MALE) = (
 	580=>['Marvin'], 600=>['Melvin'], 680=>['Paul'], 740=>['Richard'],
 	760=>['Robert'], 820=>['Thomas'], 900=>['Walter'], 920=>['William'],
 	);
-my(%DLFM_FIRST_FEMALE) = (
+my(%DLFMR_FIRST_FEMALE) = (
 	20=>['Alice'], 40=>['Ann', 'Anna', 'Anne', 'Annie'],
 	80=>['Bette', 'Bettie', 'Betty'], 120=>['Catherine'],
 	140=>['Clara'], 180=>['Dorothy'], 220=>['Elizabeth'],
@@ -32,20 +32,57 @@ my(%DLFM_FIRST_FEMALE) = (
 	680=>['Patricia'], 740=>['Ruby'], 760=>['Ruth'], 820=>['Thelma'],
 	900=>['Wanda'], 920=>['Wilma'],
 	);
-my(%DLFM_FIRST_INIT) = (
+my(%DLFMR_FIRST_INIT) = (
 	0 => 'A', 60 => 'B', 100 => 'C', 160 => 'D', 200 => 'E', 240 => 'F',
 	280 => 'G', 320 => 'H', 400 => 'I', 420 => 'J', 500 => 'K', 520 => 'L',
 	540 => 'M', 620 => 'N', 640 => 'O', 660 => 'P', 700 => 'Q', 720 => 'R',
 	780 => 'S', 800 => 'T', 840 => 'U', 860 => 'V', 880 => 'W', 940 => 'X',
 	960 => 'Y', 980 => 'Z',
 	);
-my(%DLFM_MIDDLE_INIT) = (
+my(%DLFMR_MIDDLE_INIT) = (
 	1 => [qw(A)], 2 => [qw(B)], 3 => [qw(C)], 4 => [qw(D)],
 	5 => [qw(E)], 6 => [qw(F)], 7 => [qw(G)], 8 => [qw(H)],
 	9 => [qw(I)], 10 => [qw(J)], 11 => [qw(K)], 12 => [qw(L)],
 	13 => [qw(M)], 14 => [qw(N O)], 15 => [qw(P Q)], 16 => [qw(R)],
 	17 => [qw(S)], 18 => [qw(T U V)], 19 => [qw(W X Y Z)],
 	);
+
+my(%DLFM_FIRST_MALE) = uc_hash_keys(reverse_plural_hash(%DLFMR_FIRST_MALE));
+my(%DLFM_FIRST_FEMALE) = uc_hash_keys(reverse_plural_hash(%DLFMR_FIRST_FEMALE));
+my(%DLFM_FIRST_INIT) = uc_hash_keys(reverse_hash(%DLFMR_FIRST_INIT));
+my(%DLFM_MIDDLE_INIT) = uc_hash_keys(reverse_plural_hash(%DLFMR_MIDDLE_INIT));
+
+#===============================================================================
+sub uc_hash_keys {
+	my(%hash) = @_;
+	my %result;
+	foreach my $key (keys %hash) {
+		$result{uc($key)} = $hash{$key}
+	}
+	return %result;
+}
+
+#===============================================================================
+sub reverse_plural_hash {
+	my(%hash) = @_;
+	my %result;
+	foreach my $key (keys %hash) {
+		foreach my $value (@{$hash{$key}}) {
+			$result{$value} = $key;
+		}
+	}
+	return %result;
+}
+
+#===============================================================================
+sub reverse_hash {
+	my(%hash) = @_;
+	my %result;
+	foreach my $key (keys %hash) {
+		$result{$hash{$key}} = $key;
+	}
+	return %result;
+}
 
 #===============================================================================
 sub english_list_join {
@@ -67,11 +104,11 @@ sub english_list_join {
 sub dlfirstmiddle_middle_from_code {
 	my($code) = @_;
 	$code %= 20;
-	if(not exists $DLFM_MIDDLE_INIT{$code}) {
+	if(not exists $DLFMR_MIDDLE_INIT{$code}) {
 		return '';
 	}
 
-	my(@answer) = @{$DLFM_MIDDLE_INIT{$code}};
+	my(@answer) = @{$DLFMR_MIDDLE_INIT{$code}};
 
 	return english_list_join('or', @answer);
 }
@@ -81,11 +118,11 @@ sub dlfirstmiddle_first_from_code {
 	my($code, $gender) = @_;
 	$code -= $code % 20;
 	my(@female, @male);
-	if(exists $DLFM_FIRST_FEMALE{$code}) {
-		@female = @{$DLFM_FIRST_FEMALE{$code}};
+	if(exists $DLFMR_FIRST_FEMALE{$code}) {
+		@female = @{$DLFMR_FIRST_FEMALE{$code}};
 	}
-	if(exists $DLFM_FIRST_MALE{$code}) {
-		@male = @{$DLFM_FIRST_MALE{$code}};
+	if(exists $DLFMR_FIRST_MALE{$code}) {
+		@male = @{$DLFMR_FIRST_MALE{$code}};
 	}
 
 	my(@probable, @improbable);
@@ -99,8 +136,8 @@ sub dlfirstmiddle_first_from_code {
 		@probable = (@male, @female);
 	}
 
-	if(not @probable and exists $DLFM_FIRST_INIT{$code}) {
-		@probable = ($DLFM_FIRST_INIT{$code}.'.');
+	if(not @probable and exists $DLFMR_FIRST_INIT{$code}) {
+		@probable = ($DLFMR_FIRST_INIT{$code}.'.');
 	}
 
 	my $return = english_list_join('or', @probable);
@@ -109,6 +146,33 @@ sub dlfirstmiddle_first_from_code {
 			english_list_join('or', @improbable).')';
 	}
 	return $return;
+}
+
+#===============================================================================
+sub dlfirstmiddle_encode {
+	my($FN, $MiddleInit) = @_;
+	my($NameNum) = 0;
+
+	$FN = uc($FN);
+	$MiddleInit = uc($MiddleInit);
+	my($first_init)= ($FN =~ /^(.)/);
+
+	if(exists $DLFM_FIRST_MALE{$FN}) {
+		$NameNum = $DLFM_FIRST_MALE{$FN};
+	} elsif(exists $DLFM_FIRST_FEMALE{$FN}) {
+		$NameNum = $DLFM_FIRST_FEMALE{$FN};
+	} elsif(exists $DLFM_FIRST_INIT{$first_init}) {
+		$NameNum = $DLFM_FIRST_INIT{$first_init};
+	} else {
+		return 'BAD';
+	}
+
+	if(defined($DLFM_MIDDLE_INIT{$MiddleInit}))
+		{ $NameNum += $DLFM_MIDDLE_INIT{$MiddleInit}; }
+	else
+		{ return('BAD'); }
+
+	return sprintf("%03d",$NameNum);
 }
 
 #===============================================================================
@@ -505,7 +569,7 @@ sub month_name {
 
 sub gender {
 	my($input) = @_;
-	if($input > 500) { return 'female'; }
+	if($input >= 500) { return 'female'; }
 	return 'male';
 }
 
@@ -606,7 +670,7 @@ sub process
 			'number from 1 to 31.';
 	}
 	if($gender ne 'M' and $gender ne 'F') {
-		$error_fields{'gender'} .= 'Please specify gender.';
+		$error_fields{'gender'} .= 'Please specify gender (M or F)';
 	}
 	
 	if((defined $error_explain and length $error_explain) or
@@ -618,7 +682,7 @@ sub process
 	my($YearTens, $YearOnes) = split(//,sprintf("%02d",$yy));
 
 	my $dl = main::soundex($last).'-'.
-		first_name_middle_init($first, $middle).
+		dlfirstmiddle_encode($first, $middle).
 		$YearTens.'-'.$YearOnes.
 		month_day_gender($mm, $dd, $gender).'-??';
 	
@@ -647,78 +711,10 @@ sub month_day_gender
 }
 
 
-sub first_name_middle_init
+sub dlfirstmiddle_encode
 {
 	my($FN, $MiddleInit) = @_;
-	my($NameNum, %FirstNameLookup, %FirstInitLookup, %MiddleInitLookup);
-	my($Return);
-
-	$FN = uc($FN);
-	$MiddleInit = uc($MiddleInit);
-
-	%FirstNameLookup =
-	(
-		'ALBERT'	=> 20, 'ALICE'		=> 20,
-		'ANN'		=> 40, 'ANNE'		=> 40, 'ANNA'		=> 40,
-		'ANNIE'		=> 40, 'ARTHUR'	=> 40,
-		'BERNARD'	=> 80, 'BETTY'		=> 80, 'BETTE'		=> 80,
-		'BETTIE'	=> 80,
-		'CARL'		=> 120, 'CATHERINE'	=> 120,
-		'CHARLES'	=> 140, 'CLARA'		=> 140,
-		'DONALD'	=> 180, 'DOROTHY'	=> 180,
-		'EDWARD'	=> 220, 'ELIZABETH'	=> 220,
-		'FLORENCE'	=> 260, 'FRANK'		=> 260,
-		'GEORGE'	=> 300, 'GRACE'		=> 300,
-		'HAROLD'	=> 340, 'HARRIET'	=> 340,
-		'HARRY'		=> 360, 'HAZEL'		=> 360,
-		'HELEN'		=> 380, 'HENRY'		=> 380,
-		'JAMES'		=> 440, 'JANE'		=> 440, 'JAYNE'		=> 440,
-		'JEAN'		=> 460, 'JOHN'		=> 460,
-		'JOAN'		=> 480, 'JOSEPH'	=> 480,
-		'MARGARET'	=> 560, 'MARTIN'	=> 560,
-		'MARVIN'	=> 580, 'MARY'		=> 580,
-		'MELVIN'	=> 600, 'MILDRED'	=> 600,
-		'PATRICIA'	=> 680, 'PAUL'		=> 680,
-		'RICHARD'	=> 740, 'RUBY'		=> 740,
-		'ROBERT'	=> 760, 'RUTH'		=> 760,
-		'THELMA'	=> 820, 'THOMAS'	=> 820,
-		'WALTER'	=> 900, 'WANDA'		=> 900,
-		'WILLIAM'	=> 920, 'WILMA'		=> 920,
-	);
-
-	%FirstInitLookup =
-	(
-		'A' =>   0, 'B' =>  60, 'C' => 100, 'D' => 160, 'E' => 200, 'F' => 240,
-		'G' => 280, 'H' => 320, 'I' => 400, 'J' => 420, 'K' => 500, 'L' => 520,
-		'M' => 540, 'N' => 620, 'O' => 640, 'P' => 660, 'Q' => 700, 'R' => 720,
-		'S' => 780, 'T' => 800, 'U' => 840, 'V' => 860, 'W' => 880, 'X' => 940,
-		'Y' => 960, 'Z' => 980,
-	);
-
-	%MiddleInitLookup =
-	(
-		'A' =>  1, 'B' =>  2, 'C' =>  3, 'D' =>  4, 'E' =>  5, 'F' =>  6,
-		'G' =>  7, 'H' =>  8, 'I' =>  9, 'J' => 10, 'K' => 11, 'L' => 12,
-		'M' => 13, 'N' => 14, 'O' => 14, 'P' => 15, 'Q' => 15, 'R' => 16,
-		'S' => 17, 'T' => 18, 'U' => 18, 'V' => 18, 'W' => 19, 'X' => 19,
-		'Y' => 19, 'Z' => 19,
-	);
-
-	if(defined($FirstNameLookup{$FN}))
-		{ $NameNum = $FirstNameLookup{$FN}; }
-	elsif(defined($FirstInitLookup{(split(//,$FN))[0]}))
-		{ $NameNum = $FirstInitLookup{(split(//,$FN))[0]}; }
-	else
-		{ return('BAD'); }
-
-	if(defined($MiddleInitLookup{$MiddleInit}))
-		{ $NameNum += $MiddleInitLookup{$MiddleInit}; }
-	else
-		{ return('BAD'); }
-
-	$Return = sprintf("%03d",$NameNum);
-
-	return($Return);
+	return main::dlfirstmiddle_encode($FN, $MiddleInit);
 }
 
 
@@ -764,8 +760,8 @@ sub options
 {
 	return(
 		['Last Name', 'last', 'text', 40],
-		#['First Name', 'first', 'text', 40],
-		#['Middle Initial', 'middle', 'text', 1],
+		['First Name', 'first', 'text', 40],
+		['Middle Initial', 'middle', 'text', 1],
 		['Gender', 'gender', 'radio', ['M', 'F'] ],
 		['Date of Birth'],
 		[' Year', 'y', 'text', 4],
@@ -779,8 +775,8 @@ sub process
 	my($self) = shift;
 	my(%params) = @_;
 	my($last) = $params{'last'};
-	#my($first) = $params{'first'};
-	#my($middle) = $params{'middle'};
+	my($first) = $params{'first'};
+	my($middle) = $params{'middle'};
 	my($gender) = uc($params{'gender'});
 	my($yy) = $params{'y'};
 	my($mm) = $params{'m'};
@@ -808,7 +804,7 @@ sub process
 			'number from 1 to 31.';
 	}
 	if($gender ne 'M' and $gender ne 'F') {
-		$error_fields{'gender'} .= 'Please specify gender.';
+		$error_fields{'gender'} .= 'Please specify gender (M or F)';
 	}
 	
 	if((defined $error_explain and length $error_explain) or
@@ -816,16 +812,15 @@ sub process
 		return(\%error_fields, $error_explain, $output);
 	}
 
-	#$middle = substr $middle, 0, 1;
+	$middle = substr $middle, 0, 1;
 	my($YearTens, $YearOnes) = split(//,sprintf("%02d",$yy));
 
 	my $dl = main::soundex($last).'-'.
-		'???'.
+		main::dlfirstmiddle_encode($first, $middle).
 		$YearTens.'-'.$YearOnes.
 		month_day_gender($mm, $dd, $gender).'-??';
 	
 	$output = main::format_key_value("Driver's License Number", $dl).
-	"I don't yet know how the fourth through sixth digits are calculated. ".
 	"The last two digits cannot be determined.  They represent the ".
 	"number of people who have the exact same license number as you ".
 	"(excepting the last two digits), when you got your license.";
@@ -841,8 +836,8 @@ sub month_day_gender
 	my($DateNo);
 	$Gender = uc($Gender);
 
-	$DateNo = ($Month - 1) * 40 + $Day;
-	if($Gender eq 'F') { $DateNo += 500; }
+	$DateNo = ($Month - 1) * 31 + $Day;
+	if($Gender eq 'F') { $DateNo += 600; }
 
 	$DateNo = sprintf("%03d",$DateNo);
 
@@ -942,13 +937,13 @@ sub process
 sub day {
 	my($input) = @_;
 	$input %= 500;
-	return($input % 40);
+	return($input % 31);
 }
 
 sub month_num {
 	my($input) = @_;
 	$input %= 500;
-	return(($input - day($input)) / 40 + 1);
+	return(($input - day($input)) / 31 + 1);
 }
 
 sub month_name {
@@ -959,67 +954,22 @@ sub month_name {
 }
 
 sub gender {
-	return 'Unknown (work in progress)';
-	#my($input) = @_;
-	#if($input > 500) { return 'female'; }
-	#return 'male';
+	my($input) = @_;
+	if($input >= 600) { return 'female'; }
+	return 'male';
 }
 
 sub middle_init
 {
-	return 'Unknown (work in progress)';
 	my($input) = @_;
-	$input %= 20;
-	my(%MIDDLE_INIT) = (
-		1 => 'A', 2 => 'B', 3 => 'C', 4 => 'D', 5 => 'E', 6 => 'F', 7 => 'G',
-		8 => 'H', 9 => 'I', 10 => 'J', 11 => 'K', 12 => 'L', 13 => 'M',
-		14 => 'N or O', 15 => 'P or Q', 16 => 'R', 17 => 'S',
-		18 => 'T, U, or V', 19 => 'W, X, Y, or Z',
-	);
-
-	return($MIDDLE_INIT{$input});
+	return main::dlfirstmiddle_middle_from_code($input);
 }
 
 
 sub first_name
 {
-	return 'Unknown (work in progress)';
 	my($Input, $Gender) = @_;
-	my(%Male, %Female, %FirstInit);
-	my($Name);
-	%Male = (
-		120=>'Carl', 140=>'Charles', 180=>'Donald', 20=>'Albert',
-		220=>'Edward', 260=>'Frank', 300=>'George', 340=>'Harold',
-		360=>'Harry', 380=>'Henry', 40=>'Arthur', 440=>'James',
-		460=>'John', 480=>'Joseph', 560=>'Martin', 580=>'Marvin',
-		600=>'Melvin', 680=>'Paul', 740=>'Richard', 760=>'Robert',
-		80=>'Bernard', 820=>'Thomas', 900=>'Walter', 920=>'William',
-	);
-	%Female = (
-		120=>'Catherine', 140=>'Clara', 180=>'Dorothy', 20=>'Alice',
-		220=>'Elizabeth', 260=>'Florence', 300=>'Grace', 340=>'Harriet',
-		360=>'Hazel', 380=>'Helen', 40=>'Ann, Anna, Anne, Annie',
-		440=>'Jane, Jayne', 460=>'Jean', 480=>'Joan', 580=>'Mary',
-		600=>'Mildred', 680=>'Patricia', 740=>'Ruby', 760=>'Ruth',
-		80=>'Bette, Bettie, Betty', 820=>'Thelma', 900=>'Wanda', 920=>'Wilma',
-	);
-	%FirstInit = (
-		0 => 'A', 60 => 'B', 100 => 'C', 160 => 'D', 200 => 'E', 240 => 'F',
-		280 => 'G', 320 => 'H', 400 => 'I', 420 => 'J', 500 => 'K', 520 => 'L',
-		540 => 'M', 620 => 'N', 640 => 'O', 660 => 'P', 700 => 'Q', 720 => 'R',
-		780 => 'S', 800 => 'T', 840 => 'U', 860 => 'V', 880 => 'W', 940 => 'X',
-		960 => 'Y', 980 => 'Z',
-	);
-
-	$Input -= $Input%20;
- 	if(defined($Male{$Input}))
- 	{
-		if($Gender =~ /f/i)	{ $Name = $Female{$Input}; }
-		else				{ $Name = $Male{$Input}; }
-	}
- 	else
- 		{ $Name = $FirstInit{$Input}; }
-	return($Name);
+	return main::dlfirstmiddle_first_from_code($Input, $Gender);
 }
 
 
