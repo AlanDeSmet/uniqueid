@@ -2359,7 +2359,7 @@ sub new {
 	return $self;
 }
 
-sub uid { 'mrz' }
+sub uid { 'mrzp' }
 sub display_name { "Machine Readable Passport MRZ Calculator" }
 sub describe {
 	my($link) = main::path_to_script();
@@ -2378,22 +2378,22 @@ _EODESC
 sub options
 {
 	return(
-		["Sub-type (blank is okay)", 'ptype', 'text', 1],
+		["Sub-type", 'ptype', 'text', 1],
 		["Given name(s)", 'givennames', 'text', 40],
 		["Surname(s)", 'surnames', 'text', 40],
 		['Date of birth'],
 		[' Year', 'by', 'text', 4],
 		[' Month', 'bm', 'text', 2],
 		[' Day', 'bd', 'text', 2],
-		['Sex', 'sex', 'select', {'Male' => 'M', 'Female' => 'F'} ],
-		# Issuing country, requires dropbox support.
-		['Passport expiration date'],
+		['Sex', 'sex', 'select', {'Male' => 'M', 'Female' => 'F', 'Unspecified' => 'X'} ],
+		['Issuer', 'issuer', 'select', \%COUNTRY_TO_ALPHA3],
+		['Passport expiration'],
 		[' Year', 'by', 'text', 4],
 		[' Month', 'bm', 'text', 2],
 		[' Day', 'bd', 'text', 2],
 		["Passport number", 'passportnumber', 'text', 9],
-		["Personal number (blank is okay)", 'pin', 'text', 14],
-		# Nationality requires dropbox support.
+		["Personal number", 'pin', 'text', 14],
+		['Nationality', 'nationality', 'select', \%COUNTRY_TO_ALPHA3],
 	);
 }
 
@@ -2439,7 +2439,7 @@ sub new {
 	return $self;
 }
 
-sub uid { 'mrzp' }
+sub uid { 'mrzpr' }
 sub display_name { "Machine Readable Passport MRZ Analyzer" }
 sub describe {
 	my($link) = main::path_to_script();
@@ -2948,13 +2948,15 @@ sub get_form_options
 			my($value) = $params{$name} || '';
 			if($type eq 'select') {
 				if(scalar keys %{$other[0]} <= $MAX_RADIO_LENGTH) {
-					while(my($label, $key) = each(%{$other[0]})) {
+					foreach my $label (sort keys %{$other[0]}) {
+						my $key = $other[0]{$label};
 						my $sel = ($key eq $value) ? ' checked' : '';
 						$ret .= qq(<input type="radio" name="$name" value="$key"$sel> $label<br>);
 					}
 				} else {
 					$ret .= qq(<select name="$name">\n);
-					while(my($label, $key) = each(%{$other[0]})) {
+					foreach my $label (sort keys %{$other[0]}) {
+						my $key = $other[0]{$label};
 						my $sel = ($key eq $value) ? ' selected' : '';
 						$ret .= qq(<option value="$key"$sel>$label</option>\n);
 					}
@@ -2991,7 +2993,7 @@ body {
 
 input:Link { color: black; }
 input:Visited { color: black; }
-input:Active { color: black; }
+input:Active,select:Active { color: black; }
 
 .resultsframe,
 .inputformframe,
