@@ -2198,13 +2198,89 @@ sub state_long { 'Maryland' }
 sub state_short { 'md' }
 
 
-
-
 ################################################################################
 ################################################################################
 ################################################################################
 ################################################################################
 
+package UniqueID::Coding::MRZPassport;
+
+
+sub new {
+	my $class = shift;
+	$class = ref($class) if ref($class);
+
+	bless my $self = {}, $class;
+
+	return $self;
+}
+
+sub uid { 'mrz' }
+sub display_name { "Machine Readable Passport MRZ Calculator" }
+sub describe {
+	my($link) = main::path_to_script();
+	my $grade = main::html_alphaware();
+	return <<_EODESC;
+$grade
+<p>
+Given passport information calculate
+the two line Machine Readable Zone (MRZ) for a Machine Readable Passport
+(MRP).  This encoding system is documented
+<a href="http://www.highprogrammer.com/alan/numbers/mrp.html">here</a>
+_EODESC
+#'
+}
+
+sub options
+{
+	return(
+		["Sub-type (blank is okay)", 'ptype', 'text', 1],
+		["Given name(s)", 'givennames', 'text', 40],
+		["Surname(s)", 'surnames', 'text', 40],
+		['Date of birth'],
+		[' Year', 'by', 'text', 4],
+		[' Month', 'bm', 'text', 2],
+		[' Day', 'bd', 'text', 2],
+		['Sex', 'sex', 'radio', ['M', 'F'] ],
+		# Issuing country, requires dropbox support.
+		['Passport expiration date'],
+		[' Year', 'by', 'text', 4],
+		[' Month', 'bm', 'text', 2],
+		[' Day', 'bd', 'text', 2],
+		["Passport number", 'passportnumber', 'text', 9],
+		["Personal number (blank is okay)", 'pin', 'text', 14],
+		# Nationality requires dropbox support.
+	);
+}
+
+sub process
+{
+	my($self) = shift;
+	my(%params) = @_;
+	my(%error_fields, $error_explain, $output);
+	$error_explain = "<strong>THIS DOES NOT WORK YET!</strong>";
+
+	if((defined $error_explain and length $error_explain) or
+		scalar keys %error_fields){
+		return(\%error_fields, $error_explain, $output);
+	}
+
+	#$output =
+	#	main::format_key_value('Machine Readable Zone', $mrz).
+	#	main::format_key_value('Document type', $ptype).
+	#	main::format_key_value('Sub-type', $pptype).
+	#	main::format_key_value('Surnames (Family Name)', $surnames).
+	#	"";
+
+	return(\%error_fields, $error_explain, $output);
+}
+
+
+
+################################################################################
+################################################################################
+################################################################################
+################################################################################
 
 
 package UniqueID::Coding::MRZPassportReverse;
@@ -2440,6 +2516,7 @@ add_category(UniqueID::DriversLicense::Maryland->new());
 add_category(UniqueID::DriversLicense::Michigan->new());
 add_category(UniqueID::Coding::DLFirstMiddle->new());
 add_category(UniqueID::Coding::MRZPassportReverse->new());
+add_category(UniqueID::Coding::MRZPassport->new());
 
 
 
