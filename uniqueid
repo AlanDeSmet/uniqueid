@@ -42,6 +42,9 @@ use CGI qw(param);
 use Text::Soundex;
 use strict;
 
+$CGI::POST_MAX = 1024*64; # Ensure we don't read bunches of garbage.
+$CGI::DISABLE_UPLOADS = 1; # There is no reason to accept uploads.
+
 my $PROGRAM_NAME = 'Unique ID';
 my $VERSION;
 BEGIN {
@@ -1307,6 +1310,13 @@ exit;
 sub main
 {
 	print "Content-type: text/html\n\n";
+	my(@params) = param();
+
+	if(@params == 0 and CGI::cgi_error()) {
+		fatal_error("Your web browser sent an unexpectedly large request.  This software is unwilling to accept requests that large.  Please try again.  If the error persists, most likely your web browser is broken.");
+		return;
+
+	}
 
 	my($category) = param('type');
 	if(not defined $category) {
@@ -1324,18 +1334,10 @@ sub main
 	my($impl) = $CATEGORIES{$category};
 	if(not defined $impl)
 	{
-		print get_header($category);
-		print <<ENDERROR;
-<strong>Error:</strong>
-The category "$category" was requested.  There is no category with that name.
-ENDERROR
-		print get_full_list();
-		print get_footer();
-		return;
+		fatal_error(qq(The category "$category" was requested.  There is no category with that name.));
 	}
 
 
-	my(@params) = param();
 	my %params;
 	foreach my $p (@params)
 	{
@@ -1468,6 +1470,14 @@ ENDENTRY
 	return $ret;
 }
 
+#===============================================================================
+sub fatal_error {
+		print get_header();
+		print "<strong>Error:</strong> @_";
+		print get_full_list();
+		print get_footer();
+		exit;
+}
 #===============================================================================
 sub get_footer
 {
