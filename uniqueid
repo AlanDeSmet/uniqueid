@@ -108,6 +108,274 @@ my(%DLFM_FIRST_FEMALE) = uc_hash_keys(reverse_plural_hash(%DLFMR_FIRST_FEMALE));
 my(%DLFM_FIRST_INIT) = uc_hash_keys(reverse_hash(%DLFMR_FIRST_INIT));
 my(%DLFM_MIDDLE_INIT) = uc_hash_keys(reverse_plural_hash(%DLFMR_MIDDLE_INIT));
 
+
+
+
+# Machine Readable Travel Documents Country Codes
+my(%COUNTRY_TO_ALPHA3) = (
+	"Afghanistan" => 'AFG',
+	"Albania" => 'ALB',
+	"Algeria" => 'DZA',
+	"American Samoa" => 'ASM',
+	"Andorra" => 'AND',
+	"Angola" => 'AGO',
+	"Anguilla" => 'AIA',
+	"Antarctica" => 'ATA',
+	"Antigua and Barbuda" => 'ATG',
+	"Argentina" => 'ARG',
+	"Armenia" => 'ARM',
+	"Aruba" => 'ABW',
+	"Australia" => 'AUS',
+	"Austria" => 'AUT',
+	"Azerbaijan" => 'AZE',
+	"Bahamas" => 'BHS',
+	"Bahrain" => 'BHR',
+	"Bangladesh" => 'BGD',
+	"Barbados" => 'BRB',
+	"Belarus" => 'BLR',
+	"Belgium" => 'BEL',
+	"Belize" => 'BLZ',
+	"Benin" => 'BEN',
+	"Bermuda" => 'BMU',
+	"Bhutan" => 'BTN',
+	"Bolivia" => 'BOL',
+	"Bosnia and Herzegovina" => 'BIH',
+	"Botswana" => 'BWA',
+	"Bouvet Island" => 'BVT',
+	"Brazil" => 'BRA',
+	"British Indian Ocean Territory" => 'IOT',
+	"Brunei Darussalam" => 'BRN',
+	"Bulgaria" => 'BGR',
+	"Burkina Faso" => 'BFA',
+	"Burundi" => 'BDI',
+	"Cambodia" => 'KHM',
+	"Cameroon" => 'CMR',
+	"Canada" => 'CAN',
+	"Cape Verde" => 'CPV',
+	"Cayman Islands" => 'CYM',
+	"Central African Republic" => 'CAF',
+	"Chad" => 'TCD',
+	"Chile" => 'CHL',
+	"China" => 'CHN',
+	"Christmas Island" => 'CXR',
+	"Cocos (Keeling) Islands" => 'CCK',
+	"Colombia" => 'COL',
+	"Comoros" => 'COM',
+	"Congo" => 'COG',
+	"Cook Islands" => 'COK',
+	"Costa Rica" => 'CRI',
+	"C&ocirc;te d'Ivoire" => 'CIV',
+	"Croatia" => 'HRV',
+	"Cuba" => 'CUB',
+	"Cyprus" => 'CYP',
+	"Czech Republic" => 'CZE',
+	"Democratic People's Republic of Korea" => 'PRK',
+	"Democratic Republic of the Congo" => 'COD',
+	"Denmark" => 'DNK',
+	"Djibouti" => 'DJI',
+	"Dominica" => 'DMA',
+	"Dominican Republic" => 'DOM',
+	"East Timor" => 'TMP',
+	"Ecuador" => 'ECU',
+	"Egypt" => 'EGY',
+	"El Salvador" => 'SLV',
+	"Equatorial Guinea" => 'GNQ',
+	"Eritrea" => 'ERI',
+	"Estonia" => 'EST',
+	"Ethiopia" => 'ETH',
+	"Falkland Islands (Malvinas)" => 'FLK',
+	"Faeroe Islands" => 'FRO',
+	"Fiji" => 'FJI',
+	"Finland" => 'FIN',
+	"France" => 'FRA',
+	"France, Metropolitan" => 'FXX',
+	"French Guiana" => 'GUF',
+	"French Polynesia" => 'PYF',
+	"Gabon" => 'GAB',
+	"Gambia" => 'GMB',
+	"Georgia" => 'GEO',
+	"Germany" => 'D',
+	"Ghana" => 'GHA',
+	"Gibraltar" => 'GIB',
+	"Greece" => 'GRC',
+	"Greenland" => 'GRL',
+	"Grenada" => 'GRD',
+	"Guadeloupe" => 'GLP',
+	"Guam" => 'GUM',
+	"Guatemala" => 'GTM',
+	"Guinea" => 'GIN',
+	"Guinea-Bissau" => 'GNB',
+	"Guyana" => 'GUY',
+	"Haiti" => 'HTI',
+	"Heard and McDonald Islands" => 'HMD',
+	"Holy See (Vatican City State)" => 'VAT',
+	"Honduras" => 'HND',
+	"Hong Kong" => 'HKG',
+	"Hungary" => 'HUN',
+	"Iceland" => 'ISL',
+	"India" => 'IND',
+	"Indonesia" => 'IDN',
+	"Iran, Islamic Republic of" => 'IRN',
+	"Iraq" => 'IRQ',
+	"Ireland" => 'IRL',
+	"Israel" => 'ISR',
+	"Italy" => 'ITA',
+	"Jamaica" => 'JAM',
+	"Japan" => 'JPN',
+	"Jordan" => 'JOR',
+	"Kazakhstan" => 'KAZ',
+	"Kenya" => 'KEN',
+	"Kiribati" => 'KIR',
+	"Kuwait" => 'KWT',
+	"Kyrgyzstan" => 'KGZ',
+	"Lao People's Democratic Republic" => 'LAO',
+	"Latvia" => 'LVA',
+	"Lebanon" => 'LBN',
+	"Lesotho" => 'LSO',
+	"Liberia" => 'LBR',
+	"Libyan Arab Jamahiriya" => 'LBY',
+	"Liechtenstein" => 'LIE',
+	"Lithuania" => 'LTU',
+	"Luxembourg" => 'LUX',
+	"Madagascar" => 'MDG',
+	"Malawi" => 'MWI',
+	"Malaysia" => 'MYS',
+	"Maldives" => 'MDV',
+	"Mali" => 'MLI',
+	"Malta" => 'MLT',
+	"Marshall Islands" => 'MHL',
+	"Martinique" => 'MTQ',
+	"Mauritania" => 'MRT',
+	"Mauritius" => 'MUS',
+	"Mayotte" => 'MYT',
+	"Mexico" => 'MEX',
+	"Micronesia, Federated States of" => 'FSM',
+	"Monaco" => 'MCO',
+	"Mongolia" => 'MNG',
+	"Montserrat" => 'MSR',
+	"Morocco" => 'MAR',
+	"Mozambique" => 'MOZ',
+	"Myanmar" => 'MMR',
+	"Namibia" => 'NAM',
+	"Nauru" => 'NRU',
+	"Nepal" => 'NPL',
+	"Netherlands, Kingdom of the" => 'NLD',
+	"Netherlands Antilles" => 'ANT',
+	"Neutral Zone" => 'NTZ',
+	"New Caledonia" => 'NCL',
+	"New Zealand" => 'NZL',
+	"Nicaragua" => 'NIC',
+	"Niger" => 'NER',
+	"Nigeria" => 'NGA',
+	"Niue" => 'NIU',
+	"Norfolk Island" => 'NFK',
+	"Northern Mariana Islands" => 'MNP',
+	"Norway" => 'NOR',
+	"Oman" => 'OMN',
+	"Pakistan" => 'PAK',
+	"Palau" => 'PLW',
+	"Panama" => 'PAN',
+	"Papua New Guinea" => 'PNG',
+	"Paraguay" => 'PRY',
+	"Peru" => 'PER',
+	"Philippines" => 'PHL',
+	"Pitcairn" => 'PCN',
+	"Poland" => 'POL',
+	"Portugal" => 'PRT',
+	"Puerto Rico" => 'PRI',
+	"Qatar" => 'QAT',
+	"Republic of Korea" => 'KOR',
+	"Republic of Moldova" => 'MDA',
+	"R&eacute;union" => 'REU',
+	"Romania" => 'ROM',
+	"Russian Federation" => 'RUS',
+	"Rwanda" => 'RWA',
+	"Saint Helena" => 'SHN',
+	"Saint Kitts and Nevis" => 'KNA',
+	"Saint Lucia" => 'LCA',
+	"Saint Pierre and Miquelon" => 'SPM',
+	"Saint Vincent and the Grenadines" => 'VCT',
+	"Samoa" => 'WSM',
+	"San Marino" => 'SMR',
+	"Sao Tome and Principe" => 'STP',
+	"Saudi Arabia" => 'SAU',
+	"Senegal" => 'SEN',
+	"Seychelles" => 'SYC',
+	"Sierra Leone" => 'SLE',
+	"Singapore" => 'SGP',
+	"Slovakia" => 'SVK',
+	"Slovenia" => 'SVN',
+	"Solomon Islands" => 'SLB',
+	"Somalia" => 'SOM',
+	"South Africa" => 'ZAF',
+	"South Georgia and the South Sandwich Island" => 'SGS',
+	"Spain" => 'ESP',
+	"Sri Lanka" => 'LKA',
+	"Sudan" => 'SDN',
+	"Suriname" => 'SUR',
+	"Svalbard and Jan Mayen Islands" => 'SJM',
+	"Swaziland" => 'SWZ',
+	"Sweden" => 'SWE',
+	"Switzerland" => 'CHE',
+	"Syrian Arab Republic" => 'SYR',
+	"Taiwan Province of China" => 'TWN',
+	"Tajikistan" => 'TJK',
+	"Thailand" => 'THA',
+	"The former Yugoslav Republic of Macedonia" => 'MKD',
+	"Togo" => 'TGO',
+	"Tokelau" => 'TKL',
+	"Tonga" => 'TON',
+	"Trinidad and Tobago" => 'TTO',
+	"Tunisia" => 'TUN',
+	"Turkey" => 'TUR',
+	"Turkmenistan" => 'TKM',
+	"Turks and Caicos Islands" => 'TCA',
+	"Tuvalu" => 'TUV',
+	"Uganda" => 'UGA',
+	"Ukraine" => 'UKR',
+	"United Arab Emirates" => 'ARE',
+	"United Kingdom of Great Britain and Northern Ireland - Citizen" => 'GBR',
+	"United Kingdom of Great Britain and Northern Ireland - Dependent territories citizen" => 'GBD',
+	"United Kingdom of Great Britain and Northern Ireland - National (overseas)" => 'GBN',
+	"United Kingdom of Great Britain and Northern Ireland - Overseas citizen" => 'GBO',
+	"United Kingdom of Great Britain and Northern Ireland - Protected Person" => 'GBP',
+	"United Kingdom of Great Britain and Northern Ireland - Subject" => 'GBS',
+	"United Republic of Tanzania" => 'TZA',
+	"United States of America" => 'USA',
+	"United States of America Minor Outlying Islands" => 'UMI',
+	"Uruguay" => 'URY',
+	"Uzbekistan" => 'UZB',
+	"Vanuatu" => 'VUT',
+	"Venezuela" => 'VEN',
+	"Viet Nam" => 'VNM',
+	"Virgin Islands (Great Britian)" => 'VGB',
+	"Virgin Islands (United States)" => 'VIR',
+	"Wallis and Futuna Islands" => 'WLF',
+	"Western Sahara" => 'ESH',
+	"Yemen" => 'YEM',
+	"Zaire" => 'ZAR',
+	"Zambia" => 'ZMB',
+	"Zimbabwe" => 'ZWE',
+	"United Nations" => 'UNO',
+	"United Nations Specialized Agency" => 'UNA',
+	"Stateless" => 'XXA',
+	"Refugee (1951 convention)" => 'XXB',
+	"Refugee (non-convention)" => 'XXC',
+	"Unspecified / Unknown" => 'XXX',
+);
+my(%ALPHA3_TO_COUNTRY) = reverse_hash(%COUNTRY_TO_ALPHA3);
+
+
+#===============================================================================
+sub html_escape {
+	local($_) = @_;
+	if(not defined $_) { $_ = ''; }
+	s/\&/\&amp;/g;
+	s/\>/\&gt;/g;
+	s/\</\&lt;/g;
+	return $_;
+}
+
 #===============================================================================
 sub uc_hash_keys {
 	my(%hash) = @_;
@@ -1930,6 +2198,219 @@ sub state_long { 'Maryland' }
 sub state_short { 'md' }
 
 
+
+
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+
+
+
+package UniqueID::Coding::MRZPassportReverse;
+
+
+sub new {
+	my $class = shift;
+	$class = ref($class) if ref($class);
+
+	bless my $self = {}, $class;
+
+	return $self;
+}
+
+sub uid { 'mrzp' }
+sub display_name { "Machine Readable Passport MRZ Analyzer" }
+sub describe {
+	my($link) = main::path_to_script();
+	my $grade = main::html_alphaware();
+	return <<_EODESC;
+$grade
+<p>
+Given the two line Machine Readable Zone (MRZ) from a Machine Readable Passport
+(MRP), retrieve relevant information.  This encoding system is documented
+<a href="http://www.highprogrammer.com/alan/numbers/mrp.html">here</a>
+_EODESC
+#'
+}
+
+sub options
+{
+	return(
+		["MRZ Line One", 'l1', 'text', 44],
+		["MRZ Line Two", 'l2', 'text', 44],
+	);
+}
+
+sub process
+{
+	my($self) = shift;
+	my(%params) = @_;
+	my(%error_fields, $error_explain, $output);
+	
+	my($l1) = $params{'l1'};
+	if(not defined $l1 or length($l1) != 44) {
+		$error_fields{'l1'} .= "Please enter the 44 character line. ";
+	}
+	if($l1 =~ /[a-z]/) {
+		$error_fields{'l1'} .= "MRZs must be entirely upper case. ";
+	}
+	if($l1 !~ /^[a-zA-Z0-9<]{44}$/) {
+		$error_fields{'l1'} .= "MRZs are limited A-Z, 0-9 and &lt;. ";
+	}
+
+	my($l2) = $params{'l2'};
+	if(not defined $l2 or length($l2) != 44) {
+		$error_fields{'l2'} .= "Please enter the 44 character line. ";
+	}
+	if($l2 =~ /[a-z]/) {
+		$error_fields{'l2'} .= "MRZs must be entirely upper case. ";
+	}
+	if($l2 !~ /^[A-Z0-9<]{44}$/) {
+		$error_fields{'l2'} .= "MRZs are limited A-Z, 0-9 and &lt;. ";
+	}
+
+	if((defined $error_explain and length $error_explain) or
+		scalar keys %error_fields){
+		return(\%error_fields, $error_explain, $output);
+	}
+
+	my($error1, $ptype, $pptype, $issuer, $surnames, $givennames) 
+		= process_mrz1($l1);
+	if(defined $error1) { $error_fields{'l1'} .= $error1." "; }
+
+
+	my($error2, $ppnum, $c1, $nationality, $birth, $c2, $sex, $expire, $c3, $pin, $c4, $cx) = process_mrz2($l2);
+	if(defined $error2) { $error_fields{'l2'} .= $error2." "; }
+
+	if((defined $error_explain and length $error_explain) or
+		scalar keys %error_fields){
+		return(\%error_fields, $error_explain, $output);
+	}
+
+	my $mrz1 = main::html_escape($l1);
+	my $mrz2 = main::html_escape($l2);
+	my $mrz = "<pre>$mrz1\n$mrz2</pre>";
+
+	$output =
+		main::format_key_value('Machine Readable Zone', $mrz).
+		main::format_key_value('Document type', $ptype).
+		main::format_key_value('Sub-type', $pptype).
+		main::format_key_value('Surnames (Family Name)', $surnames).
+		main::format_key_value('Date of Birth', $birth).
+		main::format_key_value('Sex', $sex).
+		main::format_key_value('Given names', $givennames).
+		main::format_key_value('Issuing Country or Organization', code_to_country($issuer)." ($issuer)").
+		main::format_key_value('Passport Expires', $expire).
+		main::format_key_value('Passport Number', $ppnum).
+		main::format_key_value('Personal Number', $pin).
+		main::format_key_value('Nationality', code_to_country($nationality)." ($nationality)").
+		main::format_key_value('Check digit 1', $c1).
+		main::format_key_value('Check digit 2', $c2).
+		main::format_key_value('Check digit 3', $c3).
+		main::format_key_value('Check digit 4', $c4).
+		main::format_key_value('Final Check digit', $cx).
+		"";
+
+	return(\%error_fields, $error_explain, $output);
+}
+
+sub process_mrz1 {
+	my($line) = @_;
+
+	my($passport, $pptype, $countrycode, $name) = ($line =~ /(.)(.)(...)(.+)/);
+	if(not defined $name) {
+		return 'Invalid line.';
+	}
+
+	my $ptype = "Unknown (type $passport)";
+	if($passport eq 'P') { $ptype = 'Passport'; }
+
+	if($pptype eq '<') {
+		$pptype = 'None';
+	} else {
+		$pptype .= ' (Specific meaning is per-country)';
+	}
+
+	my($surnames, $givennames) = ($name =~ /(.*?)<<(.+)/);
+	$surnames = trim($surnames);
+	$givennames = trim($givennames);
+
+	return(undef, $ptype, $pptype, $countrycode, $surnames, $givennames);
+}
+
+sub process_mrz2 {
+	my($line) = @_;
+	my($ppnum, $c1, $nation, $birthyy, $birthmm, $birthdd, $c2,
+		$sex, $expyy, $expmm, $expdd, $c3, $pin, $c4, $cx) = ($line =~
+			/^(.........)(.)(...)(..)(..)(..)(.)(.)(..)(..)(..)(.)(..............)(.)(.)$/);
+	if(not defined $cx) { return 'Invalid line.'; }
+
+	if($pin eq '<<<<<<<<<<<<<<') { $pin = 'None specified'; }
+
+	if($sex eq 'M') { $sex = 'Male'; }
+	elsif($sex eq 'F') { $sex = 'Female'; }
+	elsif($sex eq '<') { $sex = 'Unspecified'; }
+	else {$sex = 'Invalid entry!'; }
+
+	$c1 = confirm_check_digit($c1, substr $line,  0, 9);
+	$c2 = confirm_check_digit($c2, substr $line, 13, 6);
+	$c3 = confirm_check_digit($c3, substr $line, 21, 6);
+	if($c4 eq '<' and substr($line, 28, 14) eq '<<<<<<<<<<<<<<') { $c4 = 0; }
+	$c4 = confirm_check_digit($c4, substr $line, 28, 14);
+
+	$cx = confirm_check_digit($cx, 
+		substr($line, 0, 10).
+		substr($line, 13, 7).
+		substr($line, 21, 22)
+		);
+
+	return(undef, trim($ppnum), $c1, $nation, "$birthyy-$birthmm-$birthdd", $c2, $sex, "$expyy-$expmm-$expdd", $c3, trim($pin), $c4, $cx);
+}
+
+sub code_to_country {
+	if(exists $ALPHA3_TO_COUNTRY{$_[0]}) {
+		return $ALPHA3_TO_COUNTRY{$_[0]};
+	}
+	return 'Unknown';
+}
+
+sub trim {
+	my($in) = @_;
+	$in =~ s/</ /g;
+	$in =~ s/\s*$//;
+	return $in;
+}
+
+sub confirm_check_digit {
+	my($c1, $input) = @_;
+	my($cc1) = calc_check_digit($input);
+	if($c1 eq $cc1) { return "Okay ($c1)"; }
+	return "Invalid (Is $c1, should be $cc1)";
+}
+
+sub calc_check_digit {
+	my($input) = @_;
+	my(@chunks) = split(//, $input);
+	my(%map) = qw( 0 0 1 1 2 2 3 3 4 4 5 5 6 6 7 7 8 8 9 9 a 10 b 11 c 12 d 13 e 14 f 15 g 16 h 17 i 18 j 19 k 20 l 21 m 22 n 23 o 24 p 25 q 26 r 27 s 28 t 29 u 30 v 31 w 32 x 33 y 34 z 35 < 0 );
+	my(@weights) = qw( 7 3 1 );
+	my $i = 0;
+	my $sum = 0;
+	foreach my $chunk (@chunks) {
+		my($value) = $map{$chunk};
+		if(not defined $value) {
+			return (undef, "Invalid character '$chunk'.");
+		}
+		my $step = $i % scalar @weights;
+		my $mult = $value * $weights[$step];
+		$sum += $mult;
+		$i++;
+	}
+
+	return $sum % 10;
+}
+
+
 ################################################################################
 ################################################################################
 ################################################################################
@@ -1942,7 +2423,7 @@ package main;
 my(%CATEGORIES);
 sub add_category {
 	my($i) = @_;
-	die if exists $CATEGORIES{$i->uid()};
+	die $i->uid()." already exists" if exists $CATEGORIES{$i->uid()};
 	$CATEGORIES{$i->uid()} = $i;
 }
 add_category(UniqueID::DriversLicense::Wisconsin->new());
@@ -1958,6 +2439,7 @@ add_category(UniqueID::DriversLicense::Minnesota->new());
 add_category(UniqueID::DriversLicense::Maryland->new());
 add_category(UniqueID::DriversLicense::Michigan->new());
 add_category(UniqueID::Coding::DLFirstMiddle->new());
+add_category(UniqueID::Coding::MRZPassportReverse->new());
 
 
 
@@ -2062,6 +2544,9 @@ sub describe_params {
 		if(defined $name) {
 			$val = $params{$name} || '';
 		}
+		$val =~ s/&/\&amp;/g;
+		$val =~ s/</\&lt;/g;
+		$val =~ s/>/\&gt;/g;
 		$ret .= format_key_value($label, $val);
 	}
 	return $ret;
@@ -2246,7 +2731,7 @@ sub get_form_options
 			} else {
 				# hopefully $type eq 'text'
 				my($length) = $other[0] || 10;
-				$ret .= qq(<input type="text" name="$name" value="$value" size="$length">);
+				$ret .= qq(<input type="text" class="text" name="$name" value="$value" size="$length">);
 			}
 		}
 		$ret .= "<td>";
@@ -2392,6 +2877,10 @@ h2.errorareaheader {
 .resultshr,
 .errorareahr {
 	display: none;
+}
+
+input.text {
+	font-family: monospace;
 }
 ENDRET
 #/* Test */
