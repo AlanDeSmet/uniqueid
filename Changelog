@@ -1,3 +1,9 @@
+0.3.0 - October 4, 2003
+- Washington state encoding dramatically improved, now Alpha
+
+0.2.1 - August 25, 2003
+- POST_MAX would cause a fatal exit in old versions of CGI.  Worked around.
+
 0.2.0 - August 25, 2003
 - Added support for encoding New Hampshire driver's license numbers.
 - Added incomplete support for Washington driver's license numbers.
