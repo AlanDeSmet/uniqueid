@@ -2060,27 +2060,27 @@ sub get_header
 		$display_name = $CATEGORIES{$this_type}->display_name();
 	}
 	$ret .= <<_EOHEADER;
-<HTML>
-<HEAD>
-<TITLE>Unique ID: $display_name</TITLE>
-</HEAD>
-<BODY>
-<H1>Unique ID</H1>
+<html>
+<head>
+<title>Unique ID: $display_name</title>
+</head>
+<body>
+<h1>Unique ID</h1>
 _EOHEADER
 	$ret .= get_form_header();
-	$ret .= qq(<SELECT NAME="type">\n);
+	$ret .= qq(<select name="type">\n);
 	foreach my $key (sort { $CATEGORIES{$a}->display_name() cmp $CATEGORIES{$b}->display_name() } keys %CATEGORIES)
 	{
 		my $name = $CATEGORIES{$key}->display_name();
 		my $selected = '';
-		$selected = ' SELECTED' if $key eq $this_type;
-		$ret .= qq(<OPTION VALUE="$key"$selected>$name</OPTION>\n);
+		$selected = ' selected' if $key eq $this_type;
+		$ret .= qq(<option value="$key"$selected>$name</option>\n);
 	}
-	$ret .= qq(</SELECT>\n);
+	$ret .= qq(</select>\n);
 	$ret .= get_form_footer('Change category');
 	my($link) = main::path_to_script();
 	$ret .= "<a href=\"$link\">Full list of categories.</a>\n";
-	$ret .= "<HR>\n";
+	$ret .= "<hr>\n";
 	return $ret;
 }
 
@@ -2089,14 +2089,14 @@ sub get_form_header
 {
 	my($path) = @_;
 	$path ||= path_to_script();
-	return qq(<FORM ACTION="$path" METHOD=POST>\n);
+	return qq(<form action="$path" method=post>\n);
 }
 #===============================================================================
 sub get_form_footer
 {
 	my($label) = @_;
 	$label ||= 'Submit';
-	return qq(<INPUT TYPE="SUBMIT" VALUE="$label">\n</FORM>\n);
+	return qq(<input type="submit" value="$label">\n</form>\n);
 }
 
 #===============================================================================
@@ -2115,7 +2115,7 @@ sub get_full_list {
     <li><a href="$link/$linkname">$name</a></li>
 ENDENTRY
 	}
-	$ret .= qq(</SELECT>\n);
+	$ret .= qq(</select>\n);
 
 	$ret .= "</ul>\n";
 	return $ret;
@@ -2159,34 +2159,34 @@ sub get_form_options
 	my(%params) = %{$params};
 	my(%errors) = %{$errors};
 	my($ret) = '';
-	$ret .= qq(<INPUT TYPE="HIDDEN" NAME="type" VALUE="$uid">);
-	$ret .= qq(<INPUT TYPE="HIDDEN" NAME="step" VALUE="1">);
-	$ret .= '<TABLE BORDER="0" CELLPADDING="0" CELLSPACING="0">'."\n";
+	$ret .= qq(<input type="hidden" NAME="type" value="$uid">);
+	$ret .= qq(<input type="hidden" name="step" value="1">);
+	$ret .= '<table border="0" cellpadding="0" cellspacing="0">'."\n";
 	foreach my $option (@{$options}) {
 		my($label, $name, $type, @other) = @{$option};
 		my($indent) = ($label =~ /^( *)/);
 		$indent =~ s/ /\&nbsp;\&nbsp;\&nbsp;/g;
 		$label =~ s/^ */$indent/g;
-		$ret .= '<TR><TD>'.format_label($label).'</TD><TD>';
+		$ret .= '<tr><td>'.format_label($label).'</td><td>';
 		if(defined $name and defined $type) {
 			my($value) = $params{$name} || '';
 			if($type eq 'radio') {
 				foreach my $entry (@{$other[0]}) {
-					my $sel = ($entry eq $value) ? ' CHECKED' : '';
-					$ret .= qq(<INPUT TYPE="RADIO" NAME="$name" VALUE="$entry"$sel> $entry<BR>);
+					my $sel = ($entry eq $value) ? ' checked' : '';
+					$ret .= qq(<input type="radio" name="$name" value="$entry"$sel> $entry<br>);
 				}
 			} else {
 				# hopefully $type eq 'text'
 				my($length) = $other[0] || 10;
-				$ret .= qq(<INPUT TYPE="TEXT" NAME="$name" VALUE= "$value" SIZE="$length">);
+				$ret .= qq(<input type="text" name="$name" value="$value" size="$length">);
 			}
 		}
-		$ret .= "<TD>";
+		$ret .= "<td>";
 		if(defined $errors{$name}) {
 			$ret .= "Error: $errors{$name}";
 		}
-		$ret .= "</TD></TR>\n";
+		$ret .= "</td></tr>\n";
 	}
-	$ret .= "</TABLE>\n";
+	$ret .= "</table>\n";
 	return $ret;
 }
