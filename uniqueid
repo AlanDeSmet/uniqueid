@@ -60,7 +60,7 @@ my $PROGRAM_NAME = 'Unique ID';
 my $COPYRIGHT_YEAR = '2004';
 my $VERSION;
 BEGIN {
-	my $ASSIGNED_VERSION = '0.4.2';
+	my $ASSIGNED_VERSION = '0.5.0';
 	my $CVS_VERSION = '$Revision$';
 	my($cvs_bits) = ($CVS_VERSION =~ /Revision: ([\d.]+)/);
 	$VERSION = "$ASSIGNED_VERSION/$cvs_bits";
