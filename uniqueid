@@ -54,6 +54,8 @@ BEGIN {
 	$VERSION = "$ASSIGNED_VERSION/$cvs_bits";
 }
 
+my $INTERNAL_CSS = 'internal.css';
+
 #===============================================================================
 my(%DLFMR_FIRST_MALE) = (
 	20=>['Albert'], 40=>['Arthur'], 80=>['Bernard'], 120=>['Carl'],
@@ -1954,7 +1956,6 @@ exit;
 #===============================================================================
 sub main
 {
-	print "Content-type: text/html\n\n";
 	my(@params);
 	# old versions of CGI just die on failure.
 	eval { @params = param(); };
@@ -1963,6 +1964,7 @@ sub main
 		my $failure = $@;
 		my $cgi_error = eval {CGI::cgi_error()};
 		if($failure or (@params == 0 and $cgi_error)) {
+			print "Content-type: text/html\n\n";
 			fatal_error("Your web browser sent an unexpectedly large request.  This software is unwilling to accept requests that large.  Please try again.  If the error persists, most likely your web browser is broken.");
 			return;
 		}
@@ -1974,6 +1976,13 @@ sub main
 		($category) = ($tmp =~ m|/*([^/]+)|) if defined $tmp;
 	}
 
+	if($category eq $INTERNAL_CSS) {
+		print "Content-type: text/css\n\n";
+		print get_internal_css();
+		return;
+	}
+
+	print "Content-type: text/html\n\n";
 	if(not defined $category) {
 		print get_header();
 		print get_full_list();
@@ -2007,13 +2016,19 @@ sub main
 	print get_header($category);
 	my($error_fields, $error_explain, $output) =
 		$impl->process(%params);
-	print "<H2>".$impl->display_name()." Output</H2>\n";
-	print "<H3>Input</H3>\n";
+	print qq(<div class="resultsarea">\n);
+	print "<h2>".$impl->display_name()." Output</h2>\n";
+	print qq(<div class="resultsareain">\n);
+	print "<h3>Input</h3>\n";
 	print describe_params($impl, %params);
-	print "<H3>Output</H3>\n";
+	print "</div>\n";
+	print qq(<div class="resultsareaout">\n);
+	print "<h3>Output</h3>\n";
 	print "$output \n" if defined $output;
 	print "$error_explain\n" if defined $error_explain;
-	print "<P><HR>\n";
+	print "</div>\n";
+	print "</div>\n";
+	print qq("<p><hr class="resultshr">\n);
 	print get_impl_form($impl, \%params, $error_fields);
 	print get_footer();
 }
@@ -2038,13 +2053,16 @@ sub describe_params {
 sub get_impl_form {
 	my($impl, $params, $error_fields) = @_;
 	my $ret = '';
-	$ret .= '<H2>'.
+	$ret .= 
+		qq(<div class="inputform">\n).
+	    '<H2>'.
 		$impl->display_name().
 		'</H2>'.
 		$impl->describe().
 		get_form_header(path_to_script()."/".$impl->uid()).
 		get_form_options($impl->uid(), [$impl->options()], $params, $error_fields).
 		get_form_footer().
+		"</div>\n".
 		'';
 
 }
@@ -2059,14 +2077,19 @@ sub get_header
 	if(defined $this_type and defined $CATEGORIES{$this_type}) {
 		$display_name = $CATEGORIES{$this_type}->display_name();
 	}
+
+	my($link) = main::path_to_script();
+
 	$ret .= <<_EOHEADER;
 <html>
 <head>
 <title>Unique ID: $display_name</title>
 </head>
+<link rel="StyleSheet" type="text/css" href="$link/$INTERNAL_CSS">
 <body>
 <h1>Unique ID</h1>
 _EOHEADER
+	$ret .= qq(<div class="typeindex">\n);
 	$ret .= get_form_header();
 	$ret .= qq(<select name="type">\n);
 	foreach my $key (sort { $CATEGORIES{$a}->display_name() cmp $CATEGORIES{$b}->display_name() } keys %CATEGORIES)
@@ -2078,9 +2101,9 @@ _EOHEADER
 	}
 	$ret .= qq(</select>\n);
 	$ret .= get_form_footer('Change category');
-	my($link) = main::path_to_script();
 	$ret .= "<a href=\"$link\">Full list of categories.</a>\n";
-	$ret .= "<hr>\n";
+	$ret .= "</div>\n";
+	$ret .= qq(<hr class="typeindexhr">\n);
 	return $ret;
 }
 
@@ -2102,6 +2125,7 @@ sub get_form_footer
 #===============================================================================
 sub get_full_list {
 	my $ret = '';
+	$ret .= qq(<div class="fullindex">\n);
 	$ret .= "<h2>Available Categories</h2>\n";
 	$ret .= "<ul>\n";
 
@@ -2115,16 +2139,19 @@ sub get_full_list {
     <li><a href="$link/$linkname">$name</a></li>
 ENDENTRY
 	}
-	$ret .= qq(</select>\n);
 
 	$ret .= "</ul>\n";
+	$ret .= "</div>\n";
 	return $ret;
 }
 
 #===============================================================================
 sub fatal_error {
 		print get_header();
+		print "<div class=\"errorarea\">\n";
 		print "<strong>Error:</strong> @_";
+		print "</div>\n";
+		print "<hr class=\"errorareahr\">\n";
 		print get_full_list();
 		print get_footer();
 		exit;
@@ -2133,8 +2160,9 @@ sub fatal_error {
 sub get_footer
 {
 	return <<END_FOOTER;
-<hr>
+<hr class="footerhr">
 
+<div class="footerarea">
 <p>Results by $PROGRAM_NAME version $VERSION
 
 <p>This software and any results it might generate are provided with <strong>absolutely no warranty</strong>.
@@ -2146,8 +2174,10 @@ disclaimer details</a>.
 <p><a href="http://www.highprogrammer.com/alan/numbers/software.html">You can
 get a copy of this software</a>.
 
-</BODY>
-</HTML>
+</div>
+
+</body>
+</html>
 END_FOOTER
 }
 
@@ -2189,4 +2219,24 @@ sub get_form_options
 	}
 	$ret .= "</table>\n";
 	return $ret;
+}
+
+sub get_internal_css() {
+	return <<ENDRET;
+ENDRET
+#/* Test */
+#h1 { border: 1px solid green; }
+#.typeindex { border: 1px solid black; }
+#.typeindexhr { border: 1px solid black; }
+#.fullindex { border: 1px solid yellow; }
+#.inputform { border: 1px dashed blue; }
+#.resultsarea { border: 2px dashed red; }
+#.resultsareain { border: 4px dashed green; }
+#.resultsareaout { border: 4px solid blue; }
+#.footerarea { border: 4px groove black; }
+#.footerhr { border: 4px groove black; }
+#.resultshr { margin-left: 10em; }
+#.errorarea { margin-left: 5em; }
+#.errorareahr { margin-left: 2em; }
+#ENDRET
 }
