@@ -843,9 +843,9 @@ sub month_mult { 40 }
 sub describe {
 	my($link) = main::path_to_script();
 	return <<_EODESC;
-Given a Wisconsin Driver's License number, determine it's owner's
+Given a Wisconsin Driver's License number, determine its owner's
 identity.
-<A HREF="http://www.highprogrammer.com/alan/numbers/dl_wi/">How it works</A>.
+<A HREF="http://www.highprogrammer.com/alan/numbers/dl_us_shared.html">How it works</A>.
 <A HREF="$link/dl_wi">Create a fictional number to test</A>.
 _EODESC
 #'
@@ -902,14 +902,6 @@ sub format_license {
 sub result_notes { "" }
 sub describe_more { "<strong>This is a work in progress and not yet complete.</strong>" }
 
-sub new {
-	my $class = shift;
-	$class = ref($class) if ref($class);
-
-	bless my $self = {}, $class;
-
-	return $self;
-}
 
 
 
@@ -941,15 +933,88 @@ sub month_mult { 31 }
 sub describe {
 	my($link) = main::path_to_script();
 	return <<_EODESC;
-Given a Illinois Driver's License number, determine it's owner's
+Given an Illinois Driver's License number, determine its owner's
 identity.
 <STRONG>This is a work in progress and is not yet complete.</STRONG>
-<A HREF="http://www.highprogrammer.com/alan/numbers/dl_il/">How it works</A>.
+<A HREF="http://www.highprogrammer.com/alan/numbers/dl_us_shared.html">How it works</A>.
 <A HREF="$link/dl_il">Create a fictional number to test</A>.
 _EODESC
 #'
 }
 
+
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+
+
+package UniqueID::DriversLicense::Florida;
+@UniqueID::DriversLicense::Florida::ISA = ( "UniqueID::DriversLicense::USShared" );
+
+
+sub new {
+	my $class = shift;
+	$class = ref($class) if ref($class);
+
+	bless my $self = {}, $class;
+
+	return $self;
+}
+
+sub state_long { 'Florida' }
+sub state_short { 'fl' }
+sub female_add { 500 }
+sub month_mult { 40 }
+sub format_license {
+	my $self = shift;
+	my($last_soundex, $first_middle_code,
+		$year_tens, $year_ones, $month_day_gender_code) = @_;
+	return $last_soundex.'-'.
+		$first_middle_code. '-'. $year_tens.$year_ones. '-'.
+		$month_day_gender_code;
+}
+sub result_notes { "" }
+sub describe_more { "<strong>This is a work in progress and not yet complete.</strong>" }
+
+
+
+
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+
+package UniqueID::DriversLicense::FloridaReverse;
+
+@UniqueID::DriversLicense::FloridaReverse::ISA = ( "UniqueID::DriversLicense::USSharedReverse" );
+
+sub new {
+	my $class = shift;
+	$class = ref($class) if ref($class);
+
+	bless my $self = {}, $class;
+
+	return $self;
+}
+
+sub state_long { 'Florida' }
+sub state_short { 'fl' }
+sub number_regex { qr/([A-Za-z]\d\d\d)-(\d\d\d)-(\d)(\d)-(\d\d\d)/ }
+sub number_sample { "S530-461-50-244" }
+sub female_add { 500 }
+sub month_mult { 40 }
+sub describe {
+	my($link) = main::path_to_script();
+	return <<_EODESC;
+Given a Florida Driver's License number, determine its owner's
+identity.
+<STRONG>This is a work in progress and is not yet complete.</STRONG>
+<A HREF="http://www.highprogrammer.com/alan/numbers/dl_us_shared.html">How it works</A>.
+<A HREF="$link/dl_fl">Create a fictional number to test</A>.
+_EODESC
+#'
+}
 
 
 
@@ -973,6 +1038,8 @@ add_category(UniqueID::DriversLicense::WisconsinReverse->new());
 add_category(UniqueID::Coding::Soundex->new());
 add_category(UniqueID::DriversLicense::Illinois->new());
 add_category(UniqueID::DriversLicense::IllinoisReverse->new());
+add_category(UniqueID::DriversLicense::Florida->new());
+add_category(UniqueID::DriversLicense::FloridaReverse->new());
 add_category(UniqueID::Coding::DLFirstMiddle->new());
 
 
