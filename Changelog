@@ -1,3 +1,7 @@
+0.X.X - ?
+- Fixed typo in Washington State when encoding birthdays on the 20th
+  of the month.
+
 0.4.1 - November 13, 2003
 - Fixed typo in Washington State license that could cause erroneous
   check digit (the 11th digit)
