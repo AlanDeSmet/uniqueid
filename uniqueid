@@ -1680,7 +1680,8 @@ sub letter_to_num {
 # Your license number is : S09507457182808935
 # 
 # Julia Ho Oct 2, 1950
-# H1498950478563550 (Too short?)
+# H14989504785463550
+#             ^- Unsure, probably right.
 
 sub encode_drivers_license {
 	my $self = shift;
@@ -1704,7 +1705,7 @@ sub encode_drivers_license {
 	if(length $last == 3) {
 		$x = 385_318_778;
 	} elsif(length $last < 3) {
-		$x = 371,539,194;
+		$x = 371_539_194;
 	}
 	my $namenum = sprintf "%012.0f",
 		10_017_758_323 * $l2
@@ -1715,7 +1716,8 @@ sub encode_drivers_license {
 		+ 729 * $f2
 		+ 27 * $f3
 		+ $m1
-		+ $x;
+		- $x;
+	print "$namenum = <Br>10_017_758_323 * $l2<br> + 371_538_441 * $l3<br> + 13_779_585 * $l4<br> + 510_355 * $l5<br> + 19_657 * $f1<br> + 729 * $f2<br> + 27 * $f3<br> + $m1<br> - $x;<br>";
 
 	my $dobnum = sprintf "%03d", 63 * $mm + 2 * $dd;
 	if($gender eq 'F') { $dobnum++; }
