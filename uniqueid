@@ -321,41 +321,42 @@ sub format_key_value {
 sub look {
 	local(*FH, $_);
 	my($key, $dict, $fold);
-    (*FH,$key,$dict,$fold) = @_;
-    my($max,$min,$mid);
-    my($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,
-       $blksize,$blocks) = stat(FH);
-    $blksize = 8192 unless $blksize;
-    $key =~ s/[^\w\s]//g if $dict;
-    $key = lc $key if $fold;
-    $max = int($size / $blksize);
-    while ($max - $min > 1) {
-	$mid = int(($max + $min) / 2);
-	seek(FH,$mid * $blksize,0);
-	$_ = <FH> if $mid;		# probably a partial line
-	$_ = <FH>;
-	chop;
-	s/[^\w\s]//g if $dict;
-	$_ = lc $_ if $fold;
-	if ($_ lt $key) {
-	    $min = $mid;
+	(*FH,$key,$dict,$fold) = @_;
+	my($max,$min,$mid);
+	my($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,$atime,$mtime,$ctime,
+	   $blksize,$blocks) = stat(FH);
+	$min = 0;
+	$blksize = 8192 unless $blksize;
+	$key =~ s/[^\w\s]//g if $dict;
+	$key = lc $key if $fold;
+	$max = int($size / $blksize);
+	while ($max - $min > 1) {
+		$mid = int(($max + $min) / 2);
+		seek(FH,$mid * $blksize,0);
+		$_ = <FH> if $mid;		# probably a partial line
+		$_ = <FH>;
+		chop;
+		s/[^\w\s]//g if $dict;
+		$_ = lc $_ if $fold;
+		if ($_ lt $key) {
+			$min = $mid;
+		}
+		else {
+			$max = $mid;
+		}
 	}
-	else {
-	    $max = $mid;
+	$min *= $blksize;
+	seek(FH,$min,0);
+	<FH> if $min;
+	while (<FH>) {
+		chop;
+		s/[^\w\s]//g if $dict;
+		$_ = lc $_ if $fold;
+		last if $_ ge $key;
+		$min = tell(FH);
 	}
-    }
-    $min *= $blksize;
-    seek(FH,$min,0);
-    <FH> if $min;
-    while (<FH>) {
-	chop;
-	s/[^\w\s]//g if $dict;
-	$_ = lc $_ if $fold;
-	last if $_ ge $key;
-	$min = tell(FH);
-    }
-    seek(FH,$min,0);
-    $min;
+	seek(FH,$min,0);
+	$min;
 }
 
 
@@ -500,15 +501,13 @@ sub process
 
 
 
-
-
 ################################################################################
 ################################################################################
 ################################################################################
 ################################################################################
 
 
-package UniqueID::DriversLicense::WisconsinReverse;
+package UniqueID::DriversLicense::USSharedReverse;
 
 
 
@@ -521,23 +520,24 @@ sub new {
 	return $self;
 }
 
-sub uid { 'dl_wir' }
-sub display_name { "Wisconsin Driver's License Analyzer" }
-sub describe {
-	my($link) = main::path_to_script();
-	return <<_EODESC;
-Given a Wisconsin Driver's License number, determine it's owner's
-identity.
-<A HREF="http://www.highprogrammer.com/alan/numbers/dl_wi/">How it works</A>.
-<A HREF="$link/dl_wi">Create a fictional number to test</A>.
-_EODESC
-#'
+
+sub uid {
+	my $self = shift;
+	my $short = $self->state_short();
+	return "dl_".$short."r";
+}
+sub display_name {
+	my $self = shift;
+	my $long = $self->state_long();
+	return "$long Driver's License Analyzer"
 }
 
 sub options
 {
+	my $self = shift;
+	my $long = $self->state_long();
 	return(
-		["Wisconsin Driver's License Number", 'l', 'text', 17],
+		["$long Driver's License Number", 'l', 'text', 17],
 	);
 }
 
@@ -547,14 +547,18 @@ sub process
 	my(%params) = @_;
 	my($lic) = $params{'l'};
 	my(%error_fields, $error_explain, $output);
+
+	my $state_name = $self->state_long();
+	my $number_re = $self->number_regex();
+	my $number_sample = $self->number_sample();
 	
 
 	my($last, $first_middle, $year_ten, $year_one, $day_month, $count) =
-		($lic =~ /([A-Za-z]\d\d\d)-(\d\d\d)(\d)-(\d)(\d\d\d)-(..)/);
+		($lic =~ /$number_re/);
 	if(not defined $day_month) {
 		$error_fields{'l'} .=
-		"Please specify a Wisconsin Driver's License number. It will look ".
-		'like "S530-4615-0244-03".';
+		"Please specify a $state_name Driver's License number. It will look ".
+		"like \"$number_sample\".";
 	}
 
 	if((defined $error_explain and length $error_explain) or
@@ -562,15 +566,15 @@ sub process
 		return(\%error_fields, $error_explain, $output);
 	}
 
-	my($gender) = gender($day_month);
-	my($first_name) = first_name($first_middle, $gender);
-	my($middle_init) = middle_init($first_middle).'.';
+	my($gender) = $self->gender($day_month);
+	my($first_name) = $self->first_name($first_middle, $gender);
+	my($middle_init) = $self->middle_init($first_middle).'.';
 	my($last_name_sound) = main::describe_soundex($last);
 	my($last_name_sound_guess) = main::soundex_sound_guess($last);
 	my(@similar_last_names) = main::soundex_similar_last_names($last);
 	my($similar_last_names) = join(', ', @similar_last_names);
-	my($month) = month_name($day_month);
-	my($day) = day($day_month);
+	my($month) = $self->month_name($day_month);
+	my($day) = $self->day($day_month);
 	my($year) = $year_ten.$year_one;
 
 	$output =
@@ -589,25 +593,33 @@ sub process
 }
 
 sub day {
+	my $self = shift;
 	my($input) = @_;
-	$input %= 500;
-	return($input % 40);
+	$input %= $self->female_add();
+	return($input % $self->month_mult());
 }
 
 sub month_num {
+	my $self = shift;
 	my($input) = @_;
-	$input %= 500;
-	return(($input - day($input)) / 40 + 1);
+	$input %= $self->female_add();
+	return(($input - $self->day($input)) / $self->month_mult() + 1);
 }
 
 sub month_name {
+	my $self = shift;
 	my($input) = @_;
 	my(@MONTHS) = ( 'January', 'February', 'March', 'April', 'May', 'June',
 		'July', 'August', 'September', 'October', 'November', 'December' );
-	return @MONTHS[month_num($input)-1];
+	my $num = $self->month_num($input);
+	if($num < 1 or $num > 12) {
+		return "BADMONTH";
+	}
+	return @MONTHS[$self->month_num($input)-1];
 }
 
 sub gender {
+	my $self = shift;
 	my($input) = @_;
 	if($input >= 500) { return 'female'; }
 	return 'male';
@@ -615,6 +627,7 @@ sub gender {
 
 sub middle_init
 {
+	my $self = shift;
 	my($input) = @_;
 	return main::dlfirstmiddle_middle_from_code($input);
 }
@@ -622,12 +635,50 @@ sub middle_init
 
 sub first_name
 {
+	my $self = shift;
 	my($Input, $Gender) = @_;
 	return main::dlfirstmiddle_first_from_code($Input, $Gender);
 }
 
 
 
+
+
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+
+
+package UniqueID::DriversLicense::WisconsinReverse;
+
+@UniqueID::DriversLicense::WisconsinReverse::ISA = ( "UniqueID::DriversLicense::USSharedReverse" );
+
+sub new {
+	my $class = shift;
+	$class = ref($class) if ref($class);
+
+	bless my $self = {}, $class;
+
+	return $self;
+}
+
+sub state_long { 'Wisconsin' }
+sub state_short { 'wi' }
+sub number_regex { qr/([A-Za-z]\d\d\d)-(\d\d\d)(\d)-(\d)(\d\d\d)-(..)/ }
+sub number_sample { "S530-4615-0244-03" }
+sub female_add { 500 }
+sub month_mult { 40 }
+sub describe {
+	my($link) = main::path_to_script();
+	return <<_EODESC;
+Given a Wisconsin Driver's License number, determine it's owner's
+identity.
+<A HREF="http://www.highprogrammer.com/alan/numbers/dl_wi/">How it works</A>.
+<A HREF="$link/dl_wi">Create a fictional number to test</A>.
+_EODESC
+#'
+}
 
 
 
@@ -893,12 +944,9 @@ sub month_day_gender
 ################################################################################
 ################################################################################
 
-
-
 package UniqueID::DriversLicense::IllinoisReverse;
 
-
-
+@UniqueID::DriversLicense::IllinoisReverse::ISA = ( "UniqueID::DriversLicense::USSharedReverse" );
 
 sub new {
 	my $class = shift;
@@ -909,8 +957,12 @@ sub new {
 	return $self;
 }
 
-sub uid { 'dl_ilr' }
-sub display_name { "Illinois Driver's License Analyzer" }
+sub state_long { 'Illinois' }
+sub state_short { 'il' }
+sub number_regex { qr/([A-Za-z]\d\d\d)-(\d\d\d)(\d)-(\d)(\d\d\d)/ }
+sub number_sample { "S530-4615-0244" }
+sub female_add { 600 }
+sub month_mult { 31 }
 sub describe {
 	my($link) = main::path_to_script();
 	return <<_EODESC;
@@ -923,97 +975,6 @@ _EODESC
 #'
 }
 
-sub options
-{
-	return(
-		["Illinois Driver's License Number", 'l', 'text', 14],
-	);
-}
-
-sub process
-{
-	my($self) = shift;
-	my(%params) = @_;
-	my($lic) = $params{'l'};
-	my(%error_fields, $error_explain, $output);
-	
-
-	my($last, $first_middle, $year_ten, $year_one, $day_month) =
-		($lic =~ /([A-Za-z]\d\d\d)-(\d\d\d)(\d)-(\d)(\d\d\d)/);
-	if(not defined $day_month) {
-		$error_fields{'l'} .=
-		"Please specify an Illinois Driver's License number. It will look ".
-		'like "S530-4615-0244".';
-	}
-
-	if((defined $error_explain and length $error_explain) or
-		scalar keys %error_fields){
-		return(\%error_fields, $error_explain, $output);
-	}
-
-	my($gender) = gender($day_month);
-	my($first_name) = first_name($first_middle, $gender);
-	my($middle_init) = middle_init($first_middle).'.';
-	my($last_name_sound) = main::describe_soundex($last);
-	my($last_name_sound_guess) = main::soundex_sound_guess($last);
-	my(@similar_last_names) = main::soundex_similar_last_names($last);
-	my($similar_last_names) = join(', ', @similar_last_names);
-	my($month) = month_name($day_month);
-	my($day) = day($day_month);
-	my($year) = $year_ten.$year_one;
-
-	$output =
-		main::format_key_value('First Name', $first_name).
-		main::format_key_value('Middle Initial', $middle_init).
-		main::format_key_value('Last Name', $last_name_sound.
-		" Perhaps it sounds like \"$last_name_sound_guess\"").
-		main::format_key_value('Last Name Guesses', $similar_last_names).
-		main::format_key_value('Gender', $gender).
-		main::format_key_value('Date of Birth', "$month $day, '$year").
-		main::format_key_value('Wild Guess', "$first_name $middle_init ".
-			"$similar_last_names[0], $gender, born $month $day, 19$year").
-		'';
-
-	return(\%error_fields, $error_explain, $output);
-}
-
-sub day {
-	my($input) = @_;
-	$input %= 500;
-	return($input % 31);
-}
-
-sub month_num {
-	my($input) = @_;
-	$input %= 500;
-	return(($input - day($input)) / 31 + 1);
-}
-
-sub month_name {
-	my($input) = @_;
-	my(@MONTHS) = ( 'January', 'February', 'March', 'April', 'May', 'June',
-		'July', 'August', 'September', 'October', 'November', 'December' );
-	return @MONTHS[month_num($input)-1];
-}
-
-sub gender {
-	my($input) = @_;
-	if($input >= 600) { return 'female'; }
-	return 'male';
-}
-
-sub middle_init
-{
-	my($input) = @_;
-	return main::dlfirstmiddle_middle_from_code($input);
-}
-
-
-sub first_name
-{
-	my($Input, $Gender) = @_;
-	return main::dlfirstmiddle_first_from_code($Input, $Gender);
-}
 
 
 
