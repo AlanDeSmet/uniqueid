@@ -48,7 +48,7 @@ $CGI::DISABLE_UPLOADS = 1; # There is no reason to accept uploads.
 my $PROGRAM_NAME = 'Unique ID';
 my $VERSION;
 BEGIN {
-	my $ASSIGNED_VERSION = '0.4.0';
+	my $ASSIGNED_VERSION = '0.4.1';
 	my $CVS_VERSION = '$Revision$';
 	my($cvs_bits) = ($CVS_VERSION =~ /Revision: ([\d.]+)/);
 	$VERSION = "$ASSIGNED_VERSION/$cvs_bits";
@@ -2039,7 +2039,7 @@ sub get_impl_form {
 		$impl->display_name().
 		'</H2>'.
 		$impl->describe().
-		get_form_header().
+		get_form_header(path_to_script()."/".$impl->uid()).
 		get_form_options($impl->uid(), [$impl->options()], $params, $error_fields).
 		get_form_footer().
 		'';
@@ -2084,7 +2084,8 @@ _EOHEADER
 #===============================================================================
 sub get_form_header
 {
-	my($path) = path_to_script();
+	my($path) = @_;
+	$path ||= path_to_script();
 	return qq(<FORM ACTION="$path" METHOD=POST>\n);
 }
 #===============================================================================
