@@ -836,7 +836,7 @@ sub new {
 
 sub state_long { 'Wisconsin' }
 sub state_short { 'wi' }
-sub number_regex { qr/([A-Za-z]\d\d\d)-(\d\d\d)(\d)-(\d)(\d\d\d)-(..)/ }
+sub number_regex { q/([A-Za-z]\d\d\d)-(\d\d\d)(\d)-(\d)(\d\d\d)-(..)/ }
 sub number_sample { "S530-4615-0244-03" }
 sub female_add { 500 }
 sub month_mult { 40 }
@@ -926,7 +926,7 @@ sub new {
 
 sub state_long { 'Illinois' }
 sub state_short { 'il' }
-sub number_regex { qr/([A-Za-z]\d\d\d)-(\d\d\d)(\d)-(\d)(\d\d\d)/ }
+sub number_regex { q/([A-Za-z]\d\d\d)-(\d\d\d)(\d)-(\d)(\d\d\d)/ }
 sub number_sample { "S530-4615-0244" }
 sub female_add { 600 }
 sub month_mult { 31 }
@@ -1000,7 +1000,7 @@ sub new {
 
 sub state_long { 'Florida' }
 sub state_short { 'fl' }
-sub number_regex { qr/([A-Za-z]\d\d\d)-(\d\d\d)-(\d)(\d)-(\d\d\d)/ }
+sub number_regex { q/([A-Za-z]\d\d\d)-(\d\d\d)-(\d)(\d)-(\d\d\d)/ }
 sub number_sample { "S530-461-50-244" }
 sub female_add { 500 }
 sub month_mult { 40 }
