@@ -1178,7 +1178,15 @@ sub get_form_footer
 #===============================================================================
 sub get_footer
 {
-	return "</BODY>\n</HTML>\n";
+	return <<END_FOOTER;
+<p>This software (and any results) is provided with ABSOLUTELY NO WARRANTY.
+<a href="http://www.highprogrammer.com/alan/numbers/disclaimer.html">Further
+disclaimer details</a>.
+<a href="http://www.highprogrammer.com/alan/numbers/software.html">You can
+get a copy of this software</a>.
+</BODY>
+</HTML>
+END_FOOTER
 }
 
 
