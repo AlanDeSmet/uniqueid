@@ -1186,7 +1186,8 @@ sub letter_to_digit {
 		7=>7,
 		8=>8,
 		9=>9,
-		'*'=>0,
+		#'*'=>0, # marist.edu site claims this
+		'*'=>4,  # This appears correct (from email)
 		'A'=>1,
 		'B'=>2,
 		'C'=>3,

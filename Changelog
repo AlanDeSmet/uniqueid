@@ -1,3 +1,7 @@
+0.4.1 - ???, 2003
+- Fixed typo in Washington State license that could cause erroneous
+  check digit (the 11th digit)
+
 0.4.0 - October 11, 2003
 - Fixed typo that generated one digit errors for Washington State licenses for
   people born on the 26th of a month.
