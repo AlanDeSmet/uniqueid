@@ -1290,6 +1290,7 @@ sub main
 
 	if(not defined $category) {
 		print get_header();
+		print get_full_list();
 		print get_footer();
 		return;
 	}
@@ -1398,6 +1399,7 @@ _EOHEADER
 	$ret .= "<HR>\n";
 	return $ret;
 }
+
 #===============================================================================
 sub get_form_header
 {
@@ -1411,6 +1413,28 @@ sub get_form_footer
 	$label ||= 'Submit';
 	return qq(<INPUT TYPE="SUBMIT" VALUE="$label">\n</FORM>\n);
 }
+
+#===============================================================================
+sub get_full_list {
+	my $ret = '';
+	$ret .= "<ul>\n";
+
+	my($link) = main::path_to_script();
+
+	foreach my $key (sort { $CATEGORIES{$a}->display_name() cmp $CATEGORIES{$b}->display_name() } keys %CATEGORIES)
+	{
+		my $name = $CATEGORIES{$key}->display_name();
+		my $linkname = $CATEGORIES{$key}->uid();
+		$ret .= <<ENDENTRY;
+    <li><a href="$link/$linkname">$name</a></li>
+ENDENTRY
+	}
+	$ret .= qq(</SELECT>\n);
+
+	$ret .= "</ul>\n";
+	return $ret;
+}
+
 #===============================================================================
 sub get_footer
 {
