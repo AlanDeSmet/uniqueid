@@ -42,10 +42,22 @@ use CGI qw(param);
 use Text::Soundex;
 use strict;
 
+
+# You can optionally set this to the URL to a CSS file to
+# use to style the output.
+my $CSS_URL = undef;
+#$CSS_URL = 'http://www.this.is.an.example.com/uniqueid.css';
+
+
+
+
+
+
 $CGI::POST_MAX = 1024*64; # Ensure we don't read bunches of garbage.
 $CGI::DISABLE_UPLOADS = 1; # There is no reason to accept uploads.
 
 my $PROGRAM_NAME = 'Unique ID';
+my $COPYRIGHT_YEAR = '2003';
 my $VERSION;
 BEGIN {
 	my $ASSIGNED_VERSION = '0.4.1';
@@ -1993,7 +2005,7 @@ sub main
 	my($impl) = $CATEGORIES{$category};
 	if(not defined $impl)
 	{
-		fatal_error(qq(The category "$category" was requested.  There is no category with that name.));
+		fatal_error(qq(The tool "$category" was requested.  There is no tool with that name.));
 	}
 
 
@@ -2016,9 +2028,9 @@ sub main
 	print get_header($category);
 	my($error_fields, $error_explain, $output) =
 		$impl->process(%params);
-	print qq(<div class="resultsareaouter">\n);
+	print qq(<div class="resultsframe">\n);
 	print "<h2 class=\"resultsareaheader\">".$impl->display_name()." Results</h2>\n";
-	print qq(<div class="resultsareainner">\n);
+	print qq(<div class="resultsbody">\n);
 	print qq(<div class="resultsareainputouter">\n);
 	print "<h3 class=\"resultsareainputheader\">Input</h3>\n";
 	print qq(<div class="resultsareainputinner">\n);
@@ -2060,9 +2072,9 @@ sub get_impl_form {
 	my($impl, $params, $error_fields) = @_;
 	my $ret = '';
 	$ret .= 
-		qq(<div class="inputformouter">\n).
+		qq(<div class="inputformframe">\n).
 	    '<h2 class="inputformheader">'.$impl->display_name().'</h2>'.
-		qq(<div class="inputforminner">\n).
+		qq(<div class="inputformbody">\n).
 		$impl->describe().
 		get_form_header(path_to_script()."/".$impl->uid(), "realinput").
 		get_form_options($impl->uid(), [$impl->options()], $params, $error_fields).
@@ -2086,20 +2098,26 @@ sub get_header
 
 	my($link) = main::path_to_script();
 
+	my $css_url = $CSS_URL;
+	$css_url ||= "$link/$INTERNAL_CSS";
+
+	# Auto set focus to first field?
+	# In header:
+	# <script type="text/javascript"> function uidinit() { if(document.realinput) { document.realinput.elements[0].focus() } } </script>
+	# <body onload="uidinit()">
 	$ret .= <<_EOHEADER;
 <html>
 <head>
 <title>Unique ID: $display_name</title>
-<script type="text/javascript">
-function uidinit() { if(document.realinput) { document.realinput.elements[0].focus() } }
-</script>
 </head>
-<link rel="StyleSheet" type="text/css" href="$link/$INTERNAL_CSS">
-<body onload="uidinit()">
+<link rel="StyleSheet" type="text/css" href="$css_url">
+<body>
+<div class="headerframe">
 <h1>Unique ID</h1>
 _EOHEADER
-	$ret .= qq(<div class="briefindexarea">\n);
+	$ret .= qq(<div class="headerbody">\n);
 	$ret .= get_form_header();
+	$ret .= "<p><a href=\"$link\">Other tools:</a>\n";
 	$ret .= qq(<select class="briefselect" name="type">\n);
 	foreach my $key (sort { $CATEGORIES{$a}->display_name() cmp $CATEGORIES{$b}->display_name() } keys %CATEGORIES)
 	{
@@ -2109,10 +2127,11 @@ _EOHEADER
 		$ret .= qq(<option value="$key"$selected>$name</option>\n);
 	}
 	$ret .= qq(</select>\n);
-	$ret .= get_form_footer('Change category');
-	$ret .= "<a href=\"$link\">Full list of categories.</a>\n";
+	$ret .= get_form_footer('Go');
+	$ret .= "</p>\n";
 	$ret .= "</div>\n";
-	$ret .= qq(<hr class="briefindexareahr">\n);
+	$ret .= "</div>\n";
+	$ret .= qq(<hr class="headerhr">\n);
 	return $ret;
 }
 
@@ -2135,9 +2154,9 @@ sub get_form_footer
 #===============================================================================
 sub get_full_list {
 	my $ret = '';
-	$ret .= qq(<div class="fullindexareaouter">\n);
-	$ret .= "<h2 class=\"fullindexareaheader\">Available Categories</h2>\n";
-	$ret .= qq(<div class="fullindexareainner">\n);
+	$ret .= qq(<div class="fullindexframe">\n);
+	$ret .= "<h2 class=\"fullindexareaheader\">Available Tools</h2>\n";
+	$ret .= qq(<div class="fullindexbody">\n);
 	$ret .= "<ul>\n";
 
 	my($link) = main::path_to_script();
@@ -2161,9 +2180,9 @@ ENDENTRY
 sub fatal_error {
 		print get_header();
 		print <<ENDERROR;
-<div class="errorareaouter">
+<div class="errorframe">
 <h2 class="errorareaheader">A Problem Was Encountered</h2>
-<div class="errorareainner">
+<div class="errorbody">
 <p>@_</p>
 </div>
 </div>
@@ -2179,17 +2198,21 @@ sub get_footer
 	return <<END_FOOTER;
 <hr class="footerhr">
 
-<div class="footerarea">
-<p>Results by $PROGRAM_NAME version $VERSION
+<div class="footerframe">
+<p>Results by $PROGRAM_NAME version $VERSION, Copyright $COPYRIGHT_YEAR <a href="http://www.highprogrammer.com/alan/">Alan De Smet</a>
 
-<p>This software and any results it might generate are provided with <strong>absolutely no warranty</strong>.
-<a href="http://www.highprogrammer.com/alan/numbers/disclaimer.html">Further
-disclaimer details</a>.
+<p>This software and its generated results come with <strong>absolutely no warranty</strong>.
 
-<p>Find a bug? <a href="http://www.highprogrammer.com/alan/email.html">Let me know!</a>  I'm always interested in improving this software.
+<p>
+<a href="http://www.highprogrammer.com/alan/numbers/">About Unique ID</a>
+&nbsp; | &nbsp;
+<a href="http://www.highprogrammer.com/alan/numbers/software.html">Download this software</a>
+&nbsp; | &nbsp;
+<a href="http://www.highprogrammer.com/alan/numbers/bugs.html">Report a Bug</a>
+&nbsp; | &nbsp;
+<a href="http://www.highprogrammer.com/alan/numbers/disclaimer.html">Disclaimer</a>
+</p>
 
-<p><a href="http://www.highprogrammer.com/alan/numbers/software.html">You can
-get a copy of this software</a>.
 
 </div>
 
@@ -2245,8 +2268,6 @@ body {
 	margin-right: 3em;
 	color: black;
 }
-/* Default link colors, but if you specify any color
- * you must specify them all */
 :Link { color: #0000FF; }
 :Visited { color: #660099; }
 :Active { color: #FF0000; }
@@ -2255,9 +2276,9 @@ input:Link { color: black; }
 input:Visited { color: black; }
 input:Active { color: black; }
 
-.resultsareaouter,
-.inputformouter,
-.fullindexareaouter
+.resultsframe,
+.inputformframe,
+.fullindexframe
 {
 	background-color: #55CC55;
 	margin-top: 1em;
@@ -2265,7 +2286,7 @@ input:Active { color: black; }
 	border: 2px solid black;
 }
 
-.errorareaouter
+.errorframe
 {
 	background-color: #CC5555;
 	margin-top: 1em;
@@ -2273,10 +2294,10 @@ input:Active { color: black; }
 	border: 2px solid black;
 }
 
-.resultsareainner,
-.inputforminner,
-.fullindexareainner,
-.errorareainner
+.resultsbody,
+.inputformbody,
+.fullindexbody,
+.errorbody
 {
 	padding-left: 1em;
 	padding-right: 1em;
@@ -2285,7 +2306,7 @@ input:Active { color: black; }
 }
 
 
-.footerarea {
+.footerframe {
 	background-color: #99EE99;
 	padding-left: 1em;
 	padding-right: 1em;
@@ -2296,22 +2317,36 @@ input:Active { color: black; }
 	border: 2px solid #AAAAAA;
 }
 
-.briefindexarea 
-{
+.headerframe {
+	background-color: #99EE99;
+	padding-left: 1em;
+	padding-right: 1em;
+	padding-top: 0.2em;
+	padding-bottom: 0;
+	margin-top: 1em;
+	margin-bottom: 1em;
+	border: 2px solid #AAAAAA;
 }
+.headerbody p {
+	margin: 0;
+	padding: 0;
+}
+
 .briefselect {
 /*	background-color: #77DD77; */
 }
 
-.footerarea {
+.footerframe {
 	font-size: 75%;
+	padding-top: 0;
+	padding-bottom: 0;
 }
-.footerarea p {
+.footerframe p {
 	margin-top: 0.4em;
 	margin-bottom: 0.4em;
 }
 
-.errorareaouter {
+.errorframe {
 	font-style: italic;
 }
 
@@ -2326,8 +2361,15 @@ radio {
 	border: 1px solid black;
 }
 
+h1 {
+	margin: 0;
+	margin-bottom: 0.3em;
+	padding: 0;
+}
+
 h2 {
-	padding-left: 1em;
+	font-size: 150%;
+	padding-left: 0.6667em;
 	padding-bottom: 0.2em;
 	margin: 0;
 	background-color: #77DD77;
@@ -2345,7 +2387,7 @@ h2.errorareaheader {
 	margin-left: 1.5em;
 }
 
-.briefindexareahr,
+.headerhr,
 .footerhr,
 .resultshr,
 .errorareahr {
