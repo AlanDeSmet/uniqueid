@@ -766,6 +766,10 @@ sub process
 	my($day) = $self->day($day_month);
 	my($year) = $year_ten.$year_one;
 
+	# Some time around 2016 this will start to be more wrong than it is
+	# right for "00".
+	my $year_thousands_guess = '19';
+
 	$output =
 		main::format_key_value('First Name', $first_name).
 		main::format_key_value('Middle Initial', $middle_init).
@@ -775,7 +779,8 @@ sub process
 		main::format_key_value('Gender', $gender).
 		main::format_key_value('Date of Birth', "$month $day, '$year").
 		main::format_key_value('Wild Guess', "$first_name $middle_init ".
-			"$similar_last_names[0], $gender, born $month $day, 19$year").
+			"$similar_last_names[0], $gender, born $month $day, ".
+			"$year_thousands_guess$year").
 		'';
 
 	return(\%error_fields, $error_explain, $output);
@@ -1396,6 +1401,8 @@ _EOHEADER
 	}
 	$ret .= qq(</SELECT>\n);
 	$ret .= get_form_footer('Change category');
+	my($link) = main::path_to_script();
+	$ret .= "<a href=\"$link\">Full list of categories.</a>\n";
 	$ret .= "<HR>\n";
 	return $ret;
 }
@@ -1440,12 +1447,18 @@ sub get_footer
 {
 	return <<END_FOOTER;
 <hr>
+
 <p>Results by $PROGRAM_NAME version $VERSION
-<p>This software (and any results) is provided with ABSOLUTELY NO WARRANTY.
+
+<p>This software and any results it might generate are provided with <strong>absolutely no warranty</strong>.
 <a href="http://www.highprogrammer.com/alan/numbers/disclaimer.html">Further
 disclaimer details</a>.
+
+<p>Find a bug? <a href="http://www.highprogrammer.com/alan/email.html">let me know!</a>  I'm always interested in improving this software.
+
 <p><a href="http://www.highprogrammer.com/alan/numbers/software.html">You can
 get a copy of this software</a>.
+
 </BODY>
 </HTML>
 END_FOOTER
