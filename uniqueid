@@ -565,10 +565,10 @@ sub describe {
 	my $state_short_r = $state_short.'r';
 	my $describe_more = $self->describe_more();
 	return <<_EODESC;
-Calculate your $state Driver's License number from your
+<p>Calculate your $state Driver's License number from your
 information.
 <A HREF="http://www.highprogrammer.com/alan/numbers/dl_us_shared.html">How it works</A>.
-<A HREF="$link/dl_$state_short_r">Reverse analyze an existing number</A>.
+<A HREF="$link/dl_$state_short_r">Reverse analyze an existing number</A>.</p>
 $describe_more
 _EODESC
 }
@@ -2016,19 +2016,25 @@ sub main
 	print get_header($category);
 	my($error_fields, $error_explain, $output) =
 		$impl->process(%params);
-	print qq(<div class="resultsarea">\n);
-	print "<h2>".$impl->display_name()." Output</h2>\n";
-	print qq(<div class="resultsareain">\n);
-	print "<h3>Input</h3>\n";
+	print qq(<div class="resultsareaouter">\n);
+	print "<h2 class=\"resultsareaheader\">".$impl->display_name()." Results</h2>\n";
+	print qq(<div class="resultsareainner">\n);
+	print qq(<div class="resultsareainputouter">\n);
+	print "<h3 class=\"resultsareainputheader\">Input</h3>\n";
+	print qq(<div class="resultsareainputinner">\n);
 	print describe_params($impl, %params);
 	print "</div>\n";
-	print qq(<div class="resultsareaout">\n);
-	print "<h3>Output</h3>\n";
+	print "</div>\n";
+	print qq(<div class="resultsareaoutputouter">\n);
+	print "<h3 class=\"resultsareaoutputheader\">Output</h3>\n";
+	print qq(<div class="resultsareaoutputinner">\n);
 	print "$output \n" if defined $output;
 	print "$error_explain\n" if defined $error_explain;
 	print "</div>\n";
 	print "</div>\n";
-	print qq("<p><hr class="resultshr">\n);
+	print "</div>\n";
+	print "</div>\n";
+	print qq(<p><hr class="resultshr">\n);
 	print get_impl_form($impl, \%params, $error_fields);
 	print get_footer();
 }
@@ -2054,14 +2060,14 @@ sub get_impl_form {
 	my($impl, $params, $error_fields) = @_;
 	my $ret = '';
 	$ret .= 
-		qq(<div class="inputform">\n).
-	    '<H2>'.
-		$impl->display_name().
-		'</H2>'.
+		qq(<div class="inputformouter">\n).
+	    '<h2 class="inputformheader">'.$impl->display_name().'</h2>'.
+		qq(<div class="inputforminner">\n).
 		$impl->describe().
-		get_form_header(path_to_script()."/".$impl->uid()).
+		get_form_header(path_to_script()."/".$impl->uid(), "realinput").
 		get_form_options($impl->uid(), [$impl->options()], $params, $error_fields).
 		get_form_footer().
+		"</div>\n".
 		"</div>\n".
 		'';
 
@@ -2084,14 +2090,17 @@ sub get_header
 <html>
 <head>
 <title>Unique ID: $display_name</title>
+<script type="text/javascript">
+function uidinit() { if(document.realinput) { document.realinput.elements[0].focus() } }
+</script>
 </head>
 <link rel="StyleSheet" type="text/css" href="$link/$INTERNAL_CSS">
-<body>
+<body onload="uidinit()">
 <h1>Unique ID</h1>
 _EOHEADER
-	$ret .= qq(<div class="typeindex">\n);
+	$ret .= qq(<div class="briefindexarea">\n);
 	$ret .= get_form_header();
-	$ret .= qq(<select name="type">\n);
+	$ret .= qq(<select class="briefselect" name="type">\n);
 	foreach my $key (sort { $CATEGORIES{$a}->display_name() cmp $CATEGORIES{$b}->display_name() } keys %CATEGORIES)
 	{
 		my $name = $CATEGORIES{$key}->display_name();
@@ -2103,16 +2112,17 @@ _EOHEADER
 	$ret .= get_form_footer('Change category');
 	$ret .= "<a href=\"$link\">Full list of categories.</a>\n";
 	$ret .= "</div>\n";
-	$ret .= qq(<hr class="typeindexhr">\n);
+	$ret .= qq(<hr class="briefindexareahr">\n);
 	return $ret;
 }
 
 #===============================================================================
 sub get_form_header
 {
-	my($path) = @_;
+	my($path, $name) = @_;
 	$path ||= path_to_script();
-	return qq(<form action="$path" method=post>\n);
+	if(defined $name) { $name = " name=\"$name\""; }
+	return qq(<form action="$path"$name method=post>\n);
 }
 #===============================================================================
 sub get_form_footer
@@ -2125,8 +2135,9 @@ sub get_form_footer
 #===============================================================================
 sub get_full_list {
 	my $ret = '';
-	$ret .= qq(<div class="fullindex">\n);
-	$ret .= "<h2>Available Categories</h2>\n";
+	$ret .= qq(<div class="fullindexareaouter">\n);
+	$ret .= "<h2 class=\"fullindexareaheader\">Available Categories</h2>\n";
+	$ret .= qq(<div class="fullindexareainner">\n);
 	$ret .= "<ul>\n";
 
 	my($link) = main::path_to_script();
@@ -2142,16 +2153,22 @@ ENDENTRY
 
 	$ret .= "</ul>\n";
 	$ret .= "</div>\n";
+	$ret .= "</div>\n";
 	return $ret;
 }
 
 #===============================================================================
 sub fatal_error {
 		print get_header();
-		print "<div class=\"errorarea\">\n";
-		print "<strong>Error:</strong> @_";
-		print "</div>\n";
-		print "<hr class=\"errorareahr\">\n";
+		print <<ENDERROR;
+<div class="errorareaouter">
+<h2 class="errorareaheader">A Problem Was Encountered</h2>
+<div class="errorareainner">
+<p>@_</p>
+</div>
+</div>
+<hr class="errorareahr">
+ENDERROR
 		print get_full_list();
 		print get_footer();
 		exit;
@@ -2169,7 +2186,7 @@ sub get_footer
 <a href="http://www.highprogrammer.com/alan/numbers/disclaimer.html">Further
 disclaimer details</a>.
 
-<p>Find a bug? <a href="http://www.highprogrammer.com/alan/email.html">let me know!</a>  I'm always interested in improving this software.
+<p>Find a bug? <a href="http://www.highprogrammer.com/alan/email.html">Let me know!</a>  I'm always interested in improving this software.
 
 <p><a href="http://www.highprogrammer.com/alan/numbers/software.html">You can
 get a copy of this software</a>.
@@ -2189,9 +2206,7 @@ sub get_form_options
 	my(%params) = %{$params};
 	my(%errors) = %{$errors};
 	my($ret) = '';
-	$ret .= qq(<input type="hidden" NAME="type" value="$uid">);
-	$ret .= qq(<input type="hidden" name="step" value="1">);
-	$ret .= '<table border="0" cellpadding="0" cellspacing="0">'."\n";
+	$ret .= '<table>'."\n";
 	foreach my $option (@{$options}) {
 		my($label, $name, $type, @other) = @{$option};
 		my($indent) = ($label =~ /^( *)/);
@@ -2218,24 +2233,129 @@ sub get_form_options
 		$ret .= "</td></tr>\n";
 	}
 	$ret .= "</table>\n";
+	$ret .= qq(<input type="hidden" NAME="type" value="$uid">);
+	$ret .= qq(<input type="hidden" name="step" value="1">);
 	return $ret;
 }
 
 sub get_internal_css() {
 	return <<ENDRET;
+body {
+	margin-left: 3em;
+	margin-right: 3em;
+	color: black;
+}
+/* Default link colors, but if you specify any color
+ * you must specify them all */
+:Link { color: #0000FF; }
+:Visited { color: #660099; }
+:Active { color: #FF0000; }
+
+input:Link { color: black; }
+input:Visited { color: black; }
+input:Active { color: black; }
+
+.resultsareaouter,
+.inputformouter,
+.fullindexareaouter
+{
+	background-color: #55CC55;
+	margin-top: 1em;
+	margin-bottom: 1em;
+	border: 2px solid black;
+}
+
+.errorareaouter
+{
+	background-color: #CC5555;
+	margin-top: 1em;
+	margin-bottom: 1em;
+	border: 2px solid black;
+}
+
+.resultsareainner,
+.inputforminner,
+.fullindexareainner,
+.errorareainner
+{
+	padding-left: 1em;
+	padding-right: 1em;
+	padding-top: 0.5em;
+	padding-bottom: 0.5em;
+}
+
+
+.footerarea {
+	background-color: #99EE99;
+	padding-left: 1em;
+	padding-right: 1em;
+	padding-top: 0.5em;
+	padding-bottom: 0.5em;
+	margin-top: 1em;
+	margin-bottom: 1em;
+	border: 2px solid #AAAAAA;
+}
+
+.briefindexarea 
+{
+}
+.briefselect {
+/*	background-color: #77DD77; */
+}
+
+.footerarea {
+	font-size: 75%;
+}
+.footerarea p {
+	margin-top: 0.4em;
+	margin-bottom: 0.4em;
+}
+
+.errorareaouter {
+	font-style: italic;
+}
+
+
+
+input[type="text"] {
+	border: 1px solid black;
+	padding: 0.1em;
+}
+
+radio {
+	border: 1px solid black;
+}
+
+h2 {
+	padding-left: 1em;
+	padding-bottom: 0.2em;
+	margin: 0;
+	background-color: #77DD77;
+}
+
+h2.errorareaheader {
+	padding-left: 1em;
+	margin: 0;
+	background-color: #dd7777;
+}
+
+
+.resultsareaoutputinner,
+.resultsareainputinner {
+	margin-left: 1.5em;
+}
+
+.briefindexareahr,
+.footerhr,
+.resultshr,
+.errorareahr {
+	display: none;
+}
 ENDRET
 #/* Test */
 #h1 { border: 1px solid green; }
-#.typeindex { border: 1px solid black; }
-#.typeindexhr { border: 1px solid black; }
-#.fullindex { border: 1px solid yellow; }
-#.inputform { border: 1px dashed blue; }
-#.resultsarea { border: 2px dashed red; }
-#.resultsareain { border: 4px dashed green; }
-#.resultsareaout { border: 4px solid blue; }
-#.footerarea { border: 4px groove black; }
-#.footerhr { border: 4px groove black; }
-#.resultshr { margin-left: 10em; }
+#.resultsareainput { border: 4px dashed green; }
+#.resultsareaoutput { border: 4px solid blue; }
 #.errorarea { margin-left: 5em; }
 #.errorareahr { margin-left: 2em; }
 #ENDRET
