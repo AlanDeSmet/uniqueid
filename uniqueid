@@ -43,7 +43,13 @@ use Text::Soundex;
 use strict;
 
 my $PROGRAM_NAME = 'Unique ID';
-my $VERSION = '0.2.0';
+my $VERSION;
+BEGIN {
+	my $ASSIGNED_VERSION = '0.2.0';
+	my $CVS_VERSION = '$Revision$';
+	my($cvs_bits) = ($CVS_VERSION =~ /Revision: ([\d.]+)/);
+	$VERSION = "$ASSIGNED_VERSION/$cvs_bits";
+}
 
 #===============================================================================
 my(%DLFMR_FIRST_MALE) = (
