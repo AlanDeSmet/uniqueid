@@ -47,6 +47,7 @@ my(%DLFM_MIDDLE_INIT) = (
 	17 => [qw(S)], 18 => [qw(T U V)], 19 => [qw(W X Y Z)],
 	);
 
+#===============================================================================
 sub english_list_join {
 	my($word, @list) = @_;
 	if(scalar @list == 0) {
@@ -62,6 +63,7 @@ sub english_list_join {
 	return (join ', ', @list).", $word $tail";
 }
 
+#===============================================================================
 sub dlfirstmiddle_middle_from_code {
 	my($code) = @_;
 	$code %= 20;
@@ -74,6 +76,7 @@ sub dlfirstmiddle_middle_from_code {
 	return english_list_join('or', @answer);
 }
 
+#===============================================================================
 sub dlfirstmiddle_first_from_code {
 	my($code, $gender) = @_;
 	$code -= $code % 20;
@@ -509,56 +512,14 @@ sub gender {
 sub middle_init
 {
 	my($input) = @_;
-	$input %= 20;
-	my(%MIDDLE_INIT) = (
-		1 => 'A', 2 => 'B', 3 => 'C', 4 => 'D', 5 => 'E', 6 => 'F', 7 => 'G',
-		8 => 'H', 9 => 'I', 10 => 'J', 11 => 'K', 12 => 'L', 13 => 'M',
-		14 => 'N or O', 15 => 'P or Q', 16 => 'R', 17 => 'S',
-		18 => 'T, U, or V', 19 => 'W, X, Y, or Z',
-	);
-
-	return($MIDDLE_INIT{$input});
+	return main::dlfirstmiddle_middle_from_code($input);
 }
 
 
 sub first_name
 {
 	my($Input, $Gender) = @_;
-	my(%Male, %Female, %FirstInit);
-	my($Name);
-	%Male = (
-		120=>'Carl', 140=>'Charles', 180=>'Donald', 20=>'Albert',
-		220=>'Edward', 260=>'Frank', 300=>'George', 340=>'Harold',
-		360=>'Harry', 380=>'Henry', 40=>'Arthur', 440=>'James',
-		460=>'John', 480=>'Joseph', 560=>'Martin', 580=>'Marvin',
-		600=>'Melvin', 680=>'Paul', 740=>'Richard', 760=>'Robert',
-		80=>'Bernard', 820=>'Thomas', 900=>'Walter', 920=>'William',
-	);
-	%Female = (
-		120=>'Catherine', 140=>'Clara', 180=>'Dorothy', 20=>'Alice',
-		220=>'Elizabeth', 260=>'Florence', 300=>'Grace', 340=>'Harriet',
-		360=>'Hazel', 380=>'Helen', 40=>'Ann, Anna, Anne, Annie',
-		440=>'Jane, Jayne', 460=>'Jean', 480=>'Joan', 580=>'Mary',
-		600=>'Mildred', 680=>'Patricia', 740=>'Ruby', 760=>'Ruth',
-		80=>'Bette, Bettie, Betty', 820=>'Thelma', 900=>'Wanda', 920=>'Wilma',
-	);
-	%FirstInit = (
-		0 => 'A', 60 => 'B', 100 => 'C', 160 => 'D', 200 => 'E', 240 => 'F',
-		280 => 'G', 320 => 'H', 400 => 'I', 420 => 'J', 500 => 'K', 520 => 'L',
-		540 => 'M', 620 => 'N', 640 => 'O', 660 => 'P', 700 => 'Q', 720 => 'R',
-		780 => 'S', 800 => 'T', 840 => 'U', 860 => 'V', 880 => 'W', 940 => 'X',
-		960 => 'Y', 980 => 'Z',
-	);
-
-	$Input -= $Input%20;
- 	if(defined($Male{$Input}))
- 	{
-		if($Gender =~ /f/i)	{ $Name = $Female{$Input}; }
-		else				{ $Name = $Male{$Input}; }
-	}
- 	else
- 		{ $Name = $FirstInit{$Input}; }
-	return($Name);
+	return main::dlfirstmiddle_first_from_code($Input, $Gender);
 }
 
 
