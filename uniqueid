@@ -81,6 +81,7 @@ my(%DLFMR_FIRST_INIT) = (
 	960 => 'Y', 980 => 'Z',
 	);
 my(%DLFMR_MIDDLE_INIT) = (
+	0 => [' ', ''],
 	1 => [qw(A)], 2 => [qw(B)], 3 => [qw(C)], 4 => [qw(D)],
 	5 => [qw(E)], 6 => [qw(F)], 7 => [qw(G)], 8 => [qw(H)],
 	9 => [qw(I)], 10 => [qw(J)], 11 => [qw(K)], 12 => [qw(L)],
@@ -292,6 +293,8 @@ sub validate_options
 	my($error, %error) = ('');
 	foreach my $option (@options) {
 		my($name, $key) = @{$option};
+		my($optional) = $option->[4]->{'optional'};
+		next if defined $optional and $optional;
 		next if not defined $key or not length $key;
 		my($value) = $params{$key};
 		if(not defined $value or not length $value) {
@@ -576,9 +579,9 @@ sub options
 		if $self->need_last_name();
 	push @options, ['First Name', 'first', 'text', 40]
 		if $self->need_first_name();
-	push @options, ['Middle Initial', 'middle', 'text', 1]
+	push @options, ['Middle Initial', 'middle', 'text', 1, {optional=>1}]
 		if $self->need_middle_initial();
-	push @options, ['Middle Name', 'middle', 'text', 40]
+	push @options, ['Middle Name', 'middle', 'text', 40, {optional=>1}]
 		if $self->need_middle_name();
 	push @options, ['Gender', 'gender', 'radio', ['M', 'F'] ]
 		if $self->need_gender();
@@ -1674,7 +1677,7 @@ sub encode_first_middle {
 			'u'=>'021', 'v'=>'022', 'w'=>'023', 'x'=>'024', 'y'=>'025',
 			'z'=>'026',
 		);
-		if(not defined $first_next) {
+		if(not defined $first_next or not length $first_next) {
 			$middle_encoded = '000';
 		} elsif(exists $table{$first_next}) {
 			$middle_encoded = $table{$first_next};
