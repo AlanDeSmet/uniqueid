@@ -3,8 +3,10 @@
 use CGI qw(param);
 use strict;
 
+#===============================================================================
 sub soundex_database { '/home/chaos/public/soundex.data' }
 
+#===============================================================================
 # TODO: This is buggy.  Get better implementation. Text::Soundex?
 sub soundex
 {
@@ -27,6 +29,7 @@ sub soundex
 	return($_);
 }
 
+#===============================================================================
 sub validate_options
 {
 	my($params, $options) = @_;
@@ -47,8 +50,27 @@ sub validate_options
 	return ($error, %error);
 }
 
+#===============================================================================
+sub path_to_script {
+	return $ENV{'SCRIPT_NAME'} || '';
+}
 
+#===============================================================================
+sub format_label {
+	my($label) = @_;
+	my($indent) = ($label =~ /^( *)/);
+	$indent =~ s/ /\&nbsp;\&nbsp;\&nbsp;/g;
+	$label =~ s/^ */$indent/g;
+	return qq(<STRONG>$label:\&nbsp;</STRONG>);
+}
 
+#===============================================================================
+sub format_key_value {
+	my($key, $value) = @_;
+	return format_label($key).$value."<BR>\n";
+}
+
+#===============================================================================
 # Usage: &look(*FILEHANDLE,$key,$dict,$fold)
 # Sets file position in FILEHANDLE to be first line greater than or equal
 # (stringwise) to $key.  Pass flags for dictionary order and case folding.
@@ -104,6 +126,71 @@ sub look {
 
 
 
+package UniqueID::Coding::Soundex;
+
+sub new {
+	my $class = shift;
+	$class = ref($class) if ref($class);
+
+	bless my $self = {}, $class;
+
+	return $self;
+}
+
+sub uid { 'c_soundex' }
+sub display_name { "Soundex Coding" }
+sub describe {
+	my($link) = main::path_to_script();
+	return <<_EODESC;
+Given an english word, determine the
+<A HREF="http://www.highprogrammer.com/alan/numbers/soundex.html">soundex
+code</A>.  Soundex codes are used in many places, including
+<A HREF="http://www.highprogrammer.com/alan/numbers/dl_wi/">Wisconsin Driver's
+License Numbers</A>.
+_EODESC
+#'
+}
+
+sub options
+{
+	return(
+		["Word", 'w', 'text', 50],
+	);
+}
+
+sub process
+{
+	my($self) = shift;
+	my(%params) = @_;
+	my($word) = $params{'w'};
+	my(%error_fields, $error_explain, $output);
+	
+	if(not defined $word or not length $word) {
+		$error_fields{'w'} .= "Please specify an english word.";
+	}
+
+	if((defined $error_explain and length $error_explain) or
+		scalar keys %error_fields){
+		return(\%error_fields, $error_explain, $output);
+	}
+
+	my $soundex = main::soundex($word);
+
+	$output = main::format_key_value('Soundex', $soundex);
+
+	return(\%error_fields, $error_explain, $output);
+}
+
+
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+
+
+
+
+
 package UniqueID::DriversLicense::WisconsinReverse;
 
 sub new {
@@ -118,14 +205,14 @@ sub new {
 sub uid { 'dl_wir' }
 sub display_name { "Wisconsin Driver's License Analyzer" }
 sub describe {
+	my($link) = main::path_to_script();
 	return <<_EODESC;
 Given a Wisconsin Driver's License number, determine it's owner's
 identity.
 <A HREF="http://www.highprogrammer.com/alan/numbers/dl_wi/">How it works</A>.
-If you would like to create a fictional number to test, select
-"Wisconsin Driver's License Calculator" above.
+<A HREF="$link/dl_wi">Create a fictional number to test</A>.
 _EODESC
-#"
+#'
 }
 
 sub options
@@ -169,16 +256,15 @@ sub process
 	my($year) = $year_ten.$year_one;
 
 	$output =
-		"<STRONG>First Name:</STRONG> $first_name<BR>\n".
-		"<STRONG>Middle Initial:</STRONG> $middle_init<BR>\n".
-		"<STRONG>Last Name:</STRONG> $last_name_sound ".
-		"Perhaps it sounds like \"$last_name_sound_guess\"<BR>\n".
-		"<STRONG>Last Name Guesses:</STRONG> $similar_last_names<BR>\n".
-		"<STRONG>Gender:</STRONG> $gender<BR>\n".
-		"<STRONG>Date of Birth:</STRONG> $month $day, '$year ".
-		  "(Year of birth could be 18$year or 20$year.)<BR>\n".
-		"<STRONG>Wild Guess:</STRONG> $first_name $middle_init ".
-		"$similar_last_names[0], $gender, born $month $day, 19$year<BR>\n".
+		main::format_key_value('First Name', $first_name).
+		main::format_key_value('Middle Initial', $middle_init).
+		main::format_key_value('Last Name', $last_name.
+		" Perhaps it sounds like \"$last_name_sound_guess\"").
+		main::format_key_value('Last Name Guesses', $similar_last_names).
+		main::format_key_value('Gender', $gender).
+		main::format_key_value('Date of Birth', "$month $day, '$year").
+		main::format_key_value('Wild Guess', "$first_name $middle_init ".
+			"$similar_last_names[0], $gender, born $month $day, 19$year").
 		'';
 
 	return(\%error_fields, $error_explain, $output);
@@ -349,10 +435,12 @@ sub new {
 sub uid { 'dl_wi' }
 sub display_name { "Wisconsin Driver's License Calculator" }
 sub describe {
+	my($link) = main::path_to_script();
 	return <<_EODESC;
 Calculate your Wisconsin Driver's License number from your
 information.
 <A HREF="http://www.highprogrammer.com/alan/numbers/dl_wi/">How it works</A>.
+<A HREF="$link/dl_wir">Reverse analyze an exististing number</A>.
 _EODESC
 #'
 }
@@ -421,7 +509,7 @@ sub process
 		$YearTens.'-'.$YearOnes.
 		month_day_gender($mm, $dd, $gender).'-??';
 	
-	$output = "<STRONG>$dl</STRONG><P>".
+	$output = main::format_key_value("Driver's License Number", $dl).
 	"The last two digits cannot be determined.  They represent the ".
 	"number of people who have the exact same license number as you ".
 	"(excepting the last two digits), when you got your license.";
@@ -541,6 +629,7 @@ sub add_category {
 }
 add_category(UniqueID::DriversLicense::Wisconsin->new());
 add_category(UniqueID::DriversLicense::WisconsinReverse->new());
+add_category(UniqueID::Coding::Soundex->new());
 
 main();
 exit;
@@ -552,8 +641,12 @@ sub main
 	print "Content-type: text/html\n\n";
 
 	my($category) = param('type');
-	if(not defined $category)
-	{
+	if(not defined $category) {
+		my($tmp) = $ENV{'PATH_INFO'};
+		($category) = ($tmp =~ m|/*([^/]+)|) if defined $tmp;
+	}
+
+	if(not defined $category) {
 		print get_header();
 		print get_footer();
 		return;
@@ -575,6 +668,7 @@ sub main
 	{
 		$params{$p} = param($p);
 	}
+	$params{'type'} = $category;
 
 	my($step) = param('step');
 	if(not defined $step)
@@ -588,13 +682,29 @@ sub main
 	print get_header();
 	my($error_fields, $error_explain, $output) =
 		$impl->process(%params);
-	print "$output \n";
-	print "$error_explain\n";
-	print "<HR>\n";
+	print "<H2>".$impl->display_name()." Output</H2>\n";
+	print "<H3>Input</H3>\n";
+	print describe_params($impl, %params);
+	print "<H3>Output</H3>\n";
+	print "$output \n" if defined $output;
+	print "$error_explain\n" if defined $error_explain;
+	print "<P><HR>\n";
 	print get_impl_form($impl, \%params, $error_fields);
 	print get_footer();
 }
 
+#===============================================================================
+sub describe_params {
+	my($impl, %params) = @_;
+	my(@options) = $impl->options();
+	my $ret = '';
+	foreach my $option (@options) {
+		my($label, $name, $type, @other) = @{$option};
+		my $val = $params{$name} || '';
+		$ret .= format_key_value($label, $val);
+	}
+	return $ret;
+}
 
 #===============================================================================
 sub get_impl_form {
@@ -638,7 +748,7 @@ _EOHEADER
 #===============================================================================
 sub get_form_header
 {
-	my($path) = $ENV{'SCRIPT_NAME'};
+	my($path) = path_to_script();
 	return qq(<FORM ACTION="$path" METHOD=GET>\n);
 }
 #===============================================================================
@@ -654,6 +764,7 @@ sub get_footer
 	return "</BODY>\n</HTML>\n";
 }
 
+
 #===============================================================================
 sub get_form_options
 {
@@ -663,14 +774,13 @@ sub get_form_options
 	my($ret) = '';
 	$ret .= qq(<INPUT TYPE="HIDDEN" NAME="type" VALUE="$uid">);
 	$ret .= qq(<INPUT TYPE="HIDDEN" NAME="step" VALUE="1">);
-	$ret .= "<TABLE>\n";
+	$ret .= '<TABLE BORDER="0" CELLPADDING="0" CELLSPACING="0">'."\n";
 	foreach my $option (@{$options}) {
 		my($label, $name, $type, @other) = @{$option};
 		my($indent) = ($label =~ /^( *)/);
 		$indent =~ s/ /\&nbsp;\&nbsp;\&nbsp;/g;
 		$label =~ s/^ */$indent/g;
-		$ret .= "<TR>";
-		$ret .= qq(<TD>$label</TD><TD>);
+		$ret .= '<TR><TD>'.format_label($label).'</TD><TD>';
 		if(defined $name and defined $type) {
 			my($value) = $params{$name} || '';
 			if($type eq 'radio') {
