@@ -15,4 +15,6 @@
 
 - Add preliminary New Jersey support
 
-- Add New York pre-1992 support
+- For machine readable passports, handle the ligatures and
+  special chracters.  Dangerous to try and decode (perhaps
+  offer options), but we should certainly encode them.

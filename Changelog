@@ -1,8 +1,9 @@
 0.5.0 - 
-- Added decoder for Machine Readable Zone on Machine Readable Passports.
+- Added encoder and decoder for Machine Readable Zone on Machine Readable
+  Passports.
 - Added encoder for New York State (Pre September 1992 only)
-- Refined radio options, they can now have labels.  Long radio options
-  are now implemented as drop lists (<select>).
+- Refined radio options, they can now have labels.  Long radio options are now
+  implemented as drop lists (<select>).
 
 0.4.2 - January 6, 2004
 - Fixed typo in Washington State when encoding birthdays on the 20th

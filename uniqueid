@@ -362,6 +362,7 @@ my(%COUNTRY_TO_ALPHA3) = (
 	"Refugee (1951 convention)" => 'XXB',
 	"Refugee (non-convention)" => 'XXC',
 	"Unspecified / Unknown" => 'XXX',
+	"Utopia (Example!)" => 'UTO',
 );
 my(%ALPHA3_TO_COUNTRY) = reverse_hash(%COUNTRY_TO_ALPHA3);
 
@@ -2369,7 +2370,6 @@ the two line Machine Readable Zone (MRZ) for a Machine Readable Passport
 (MRP).  This encoding system is documented
 <a href="http://www.highprogrammer.com/alan/numbers/mrp.html">here</a>.
 You can also <a href="$link/mrzpr">decode an existing MRZ</a>.</p>
-<p><strong>THIS DOES NOT WORK YET!</strong></p>
 _EODESC
 #'
 }
@@ -2384,12 +2384,12 @@ sub options
 		[' Year', 'by', 'text', 4],
 		[' Month', 'bm', 'text', 2],
 		[' Day', 'bd', 'text', 2],
-		['Sex', 'sex', 'select', {'Male' => 'M', 'Female' => 'F', 'Unspecified' => 'X'} ],
+		['Sex', 'sex', 'select', {'Male' => 'M', 'Female' => 'F', 'Unspecified' => '<'} ],
 		['Issuer', 'issuer', 'select', \%COUNTRY_TO_ALPHA3],
 		['Passport expiration'],
-		[' Year', 'by', 'text', 4],
-		[' Month', 'bm', 'text', 2],
-		[' Day', 'bd', 'text', 2],
+		[' Year', 'ey', 'text', 4],
+		[' Month', 'em', 'text', 2],
+		[' Day', 'ed', 'text', 2],
 		["Passport number", 'passportnumber', 'text', 9],
 		["Personal number", 'pin', 'text', 14],
 		['Nationality', 'nationality', 'select', \%COUNTRY_TO_ALPHA3],
@@ -2401,23 +2401,72 @@ sub process
 	my($self) = shift;
 	my(%params) = @_;
 	my(%error_fields, $error_explain, $output);
-	$error_explain = "<strong>THIS DOES NOT WORK YET!</strong>";
-
+# TODO FIXME XXX NO ERROR CHECKING IN PLACE YET
 	if((defined $error_explain and length $error_explain) or
 		scalar keys %error_fields){
 		return(\%error_fields, $error_explain, $output);
 	}
 
-	#$output =
-	#	main::format_key_value('Machine Readable Zone', $mrz).
-	#	main::format_key_value('Document type', $ptype).
-	#	main::format_key_value('Sub-type', $pptype).
-	#	main::format_key_value('Surnames (Family Name)', $surnames).
-	#	"";
+	my $l1 = '';
+	$l1 .= 'P';
+	if(length $params{'ptype'}) { $l1 .= substr $params{'ptype'}, 0, 1; }
+	else { $l1 .= '<'; }
+	$l1 .= $params{'issuer'};
+
+	my $name1 = mrz_filter($params{'surnames'});
+	my $name2 = mrz_filter($params{'givennames'});
+	$l1 .= padtrim_to("$name1<<$name2", 39);
+
+
+	my $l2 = '';
+	$l2 .= padtrim_to($params{'passportnumber'}, 9);
+	$l2 .= calc_check_digit($l2);
+	$l2 .= $params{'nationality'};
+	$l2 .= sprintf "%02d%02d%02d", $params{'by'} % 100, $params{'bm'}, $params{'bd'};
+	$l2 .= calc_check_digit(substr $l2, 13, 6);
+	$l2 .= $params{'sex'};
+	$l2 .= sprintf "%02d%02d%02d", $params{'ey'} % 100, $params{'em'}, $params{'ed'};
+	$l2 .= calc_check_digit(substr $l2, 21, 6);
+	$l2 .= padtrim_to($params{'pin'}, 14);
+	$l2 .= calc_check_digit(substr $l2, 28, 14);
+	$l2 .= calc_check_digit(substr($l2, 0, 10).
+		substr($l2, 13, 7).substr($l2, 21, 22));
+
+	$output =
+		main::format_key_value('Machine Readable Zone', 
+			"<pre>".main::html_escape($l1)."\n"
+			.main::html_escape($l2)."</pre>\n")
+		.q(
+<p>For a variety of reasons there might be minor
+differences between the calculated number and your
+real number.  If you name is particularlly long
+abbreviations might have been used and individual names
+removed to make it fit.  The appears to be a country by
+country issue.  Also, if the second to last digit is 0 it
+might, under certain circumstances, be replaced with &lt;.
+		);
 
 	return(\%error_fields, $error_explain, $output);
 }
 
+sub mrz_filter {
+	my($in) = @_;
+	if(not defined $in) { $in = ''; }
+	$in = uc($in);
+	$in =~ s/\s+/ /g;
+	$in =~ s/[^A-Z0-9]/</g;
+	return $in;
+}
+
+sub padtrim_to {
+	my($line, $length) = @_;
+	$line .= "<"x$length;
+	return substr $line, 0, $length;
+}
+
+sub calc_check_digit {
+	return (UniqueID::Coding::MRZPassportReverse::calc_check_digit(@_));
+}
 
 
 ################################################################################
@@ -2612,12 +2661,12 @@ sub confirm_check_digit {
 sub calc_check_digit {
 	my($input) = @_;
 	my(@chunks) = split(//, $input);
-	my(%map) = qw( 0 0 1 1 2 2 3 3 4 4 5 5 6 6 7 7 8 8 9 9 a 10 b 11 c 12 d 13 e 14 f 15 g 16 h 17 i 18 j 19 k 20 l 21 m 22 n 23 o 24 p 25 q 26 r 27 s 28 t 29 u 30 v 31 w 32 x 33 y 34 z 35 < 0 );
+	my(%map) = qw( 0 0 1 1 2 2 3 3 4 4 5 5 6 6 7 7 8 8 9 9 A 10 B 11 C 12 D 13 E 14 F 15 G 16 H 17 I 18 J 19 K 20 L 21 M 22 N 23 O 24 P 25 Q 26 R 27 S 28 T 29 U 30 V 31 W 32 X 33 Y 34 Z 35 < 0 );
 	my(@weights) = qw( 7 3 1 );
 	my $i = 0;
 	my $sum = 0;
 	foreach my $chunk (@chunks) {
-		my($value) = $map{$chunk};
+		my($value) = $map{uc($chunk)};
 		if(not defined $value) {
 			return (undef, "Invalid character '$chunk'.");
 		}
