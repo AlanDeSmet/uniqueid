@@ -1,33 +1,14 @@
 #! /usr/bin/perl -wT
 
 use CGI qw(param);
+use Text::Soundex;
 use strict;
 
 #===============================================================================
 sub soundex_database { '/home/chaos/public/soundex.data' }
 
 #===============================================================================
-# TODO: This is buggy.  Get better implementation. Text::Soundex?
-sub soundex
-{
-	local($_) = @_;
-	my($f, $fc);
-
-	tr/a-z/A-Z/;
-	tr/A-Z//cd;
-
-	if($_ eq '') { return(''); }
-
-	($f) = /^(.)/;
-	tr/AEHIOUWYBFPVCGJKQSXZDTLMNR/00000000111122222222334556/;
-	($fc) = /^(.)/;
-	s/^$fc+//;
-	tr///cs;
-	tr/0//d;
-	$_ = $f . $_ . '000';
-	s/^(.{4}).*/$1/;
-	return($_);
-}
+sub soundex { return Text::Soundex::soundex(@_); }
 
 #===============================================================================
 sub validate_options
