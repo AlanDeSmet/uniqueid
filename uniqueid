@@ -865,7 +865,7 @@ sub options
 		if $self->need_middle_name();
 	push @options, ['Last Name', 'last', 'text', 40]
 		if $self->need_last_name();
-	push @options, ['Gender', 'gender', 'radio', ['M', 'F'] ]
+	push @options, ['Gender', 'gender', 'select', {'Male' => 'M', 'Female' => 'F'} ]
 		if $self->need_gender();
 	push @options, ['Date of Birth']
 		if $self->need_dob_year() or $self->need_dob_month() or $self->need_dob_day() ;
@@ -2385,7 +2385,7 @@ sub options
 		[' Year', 'by', 'text', 4],
 		[' Month', 'bm', 'text', 2],
 		[' Day', 'bd', 'text', 2],
-		['Sex', 'sex', 'radio', ['M', 'F'] ],
+		['Sex', 'sex', 'select', {'Male' => 'M', 'Female' => 'F'} ],
 		# Issuing country, requires dropbox support.
 		['Passport expiration date'],
 		[' Year', 'by', 'text', 4],
@@ -2945,10 +2945,10 @@ sub get_form_options
 		$ret .= '<tr><td>'.format_label($label).'</td><td>';
 		if(defined $name and defined $type) {
 			my($value) = $params{$name} || '';
-			if($type eq 'radio') {
-				foreach my $entry (@{$other[0]}) {
-					my $sel = ($entry eq $value) ? ' checked' : '';
-					$ret .= qq(<input type="radio" name="$name" value="$entry"$sel> $entry<br>);
+			if($type eq 'select') {
+				while(my($label, $key) = each(%{$other[0]})) {
+					my $sel = ($key eq $value) ? ' checked' : '';
+					$ret .= qq(<input type="radio" name="$name" value="$key"$sel> $label<br>);
 				}
 			} else {
 				# hopefully $type eq 'text'
