@@ -1,4 +1,4 @@
-0.4.1 - ???, 2003
+0.4.1 - November 13, 2003
 - Fixed typo in Washington State license that could cause erroneous
   check digit (the 11th digit)
 - Allow no middle name in various driver's license algorithms
