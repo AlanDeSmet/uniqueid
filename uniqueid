@@ -1717,7 +1717,6 @@ sub encode_drivers_license {
 		+ 27 * $f3
 		+ $m1
 		- $x;
-	print "$namenum = <Br>10_017_758_323 * $l2<br> + 371_538_441 * $l3<br> + 13_779_585 * $l4<br> + 510_355 * $l5<br> + 19_657 * $f1<br> + 729 * $f2<br> + 27 * $f3<br> + $m1<br> - $x;<br>";
 
 	my $dobnum = sprintf "%03d", 63 * $mm + 2 * $dd;
 	if($gender eq 'F') { $dobnum++; }
