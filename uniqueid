@@ -1168,6 +1168,16 @@ sub letter_to_digit {
 	my $self = shift;
 	my($c)= @_;
 	my(%CHARS) = (
+		0=>0,
+		1=>1,
+		2=>2,
+		3=>3,
+		4=>4,
+		5=>5,
+		6=>6,
+		7=>7,
+		8=>8,
+		9=>9,
 		'*'=>0,
 		'A'=>1,
 		'B'=>2,
@@ -1196,6 +1206,9 @@ sub letter_to_digit {
 		'Y'=>8,
 		'Z'=>9,
 	);
+	if(not exists $CHARS{$c}) {
+		return 0;
+	}
 	return $CHARS{$c};
 }
 
