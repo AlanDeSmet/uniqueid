@@ -1,3 +1,4 @@
+0.4.0 - October 11, 2003
 - Fixed typo that generated one digit errors for Washington State licenses for
   people born on the 26th of a month.
 - Added Michigan, Maryland, and Minnesota (They're all the same algorithm)
