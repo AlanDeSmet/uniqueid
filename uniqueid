@@ -1,8 +1,112 @@
 #! /usr/bin/perl -wT
 
+# Unique ID
+#
+# Experimental implementation for algorithms as described
+# on the Unique ID web site (http://www.highprogrammer.com/alan/numbers/)
+#
+# Copyright 2002, Alan De Smet.
+#
+# This software comes with NO WARRANTY of any sort.
+
 use CGI qw(param);
 use Text::Soundex;
 use strict;
+
+#===============================================================================
+my(%DLFM_FIRST_MALE) = (
+	20=>['Albert'], 40=>['Arthur'], 80=>['Bernard'], 120=>['Carl'],
+	140=>['Charles'], 180=>['Donald'], 220=>['Edward'], 260=>['Frank'],
+	300=>['George'], 340=>['Harold'], 360=>['Harry'], 380=>['Henry'],
+	440=>['James'], 460=>['John'], 480=>['Joseph'], 560=>['Martin'],
+	580=>['Marvin'], 600=>['Melvin'], 680=>['Paul'], 740=>['Richard'],
+	760=>['Robert'], 820=>['Thomas'], 900=>['Walter'], 920=>['William'],
+	);
+my(%DLFM_FIRST_FEMALE) = (
+	20=>['Alice'], 40=>['Ann', 'Anna', 'Anne', 'Annie'],
+	80=>['Bette', 'Bettie', 'Betty'], 120=>['Catherine'],
+	140=>['Clara'], 180=>['Dorothy'], 220=>['Elizabeth'],
+	260=>['Florence'], 300=>['Grace'], 340=>['Harriet'],
+	360=>['Hazel'], 380=>['Helen'], 440=>['Jane', 'Jayne'],
+	460=>['Jean'], 480=>['Joan'], 580=>['Mary'], 600=>['Mildred'],
+	680=>['Patricia'], 740=>['Ruby'], 760=>['Ruth'], 820=>['Thelma'],
+	900=>['Wanda'], 920=>['Wilma'],
+	);
+my(%DLFM_FIRST_INIT) = (
+	0 => 'A', 60 => 'B', 100 => 'C', 160 => 'D', 200 => 'E', 240 => 'F',
+	280 => 'G', 320 => 'H', 400 => 'I', 420 => 'J', 500 => 'K', 520 => 'L',
+	540 => 'M', 620 => 'N', 640 => 'O', 660 => 'P', 700 => 'Q', 720 => 'R',
+	780 => 'S', 800 => 'T', 840 => 'U', 860 => 'V', 880 => 'W', 940 => 'X',
+	960 => 'Y', 980 => 'Z',
+	);
+my(%DLFM_MIDDLE_INIT) = (
+	1 => [qw(A)], 2 => [qw(B)], 3 => [qw(C)], 4 => [qw(D)],
+	5 => [qw(E)], 6 => [qw(F)], 7 => [qw(G)], 8 => [qw(H)],
+	9 => [qw(I)], 10 => [qw(J)], 11 => [qw(K)], 12 => [qw(L)],
+	13 => [qw(M)], 14 => [qw(N O)], 15 => [qw(P Q)], 16 => [qw(R)],
+	17 => [qw(S)], 18 => [qw(T U V)], 19 => [qw(W X Y Z)],
+	);
+
+sub english_list_join {
+	my($word, @list) = @_;
+	if(scalar @list == 0) {
+		return '';
+	}
+	if(scalar @list == 1) {
+		return $list[0];
+	}
+	if(scalar @list == 2) {
+		return "$list[0] $word $list[1]";
+	}
+	my $tail = pop @list;
+	return (join ', ', @list).", $word $tail";
+}
+
+sub dlfirstmiddle_middle_from_code {
+	my($code) = @_;
+	$code %= 20;
+	if(not exists $DLFM_MIDDLE_INIT{$code}) {
+		return '';
+	}
+
+	my(@answer) = @{$DLFM_MIDDLE_INIT{$code}};
+
+	return english_list_join('or', @answer);
+}
+
+sub dlfirstmiddle_first_from_code {
+	my($code, $gender) = @_;
+	$code -= $code % 20;
+	my(@female, @male);
+	if(exists $DLFM_FIRST_FEMALE{$code}) {
+		@female = @{$DLFM_FIRST_FEMALE{$code}};
+	}
+	if(exists $DLFM_FIRST_MALE{$code}) {
+		@male = @{$DLFM_FIRST_MALE{$code}};
+	}
+
+	my(@probable, @improbable);
+	if($gender =~ /^m/i) {
+		@probable = @male;
+		@improbable = @female;
+	} elsif($gender =~ /^f/i) {
+		@probable = @female;
+		@improbable = @male;
+	} else {
+		@probable = (@male, @female);
+	}
+
+	if(not @probable and exists $DLFM_FIRST_INIT{$code}) {
+		@probable = ($DLFM_FIRST_INIT{$code}.'.');
+	}
+
+	my $return = english_list_join('or', @probable);
+	if(scalar @improbable) {
+		$return .= ' (or possibly '.
+			english_list_join('or', @improbable).')';
+	}
+	return $return;
+}
 
 #===============================================================================
 sub soundex_database { '/home/chaos/public/soundex.data' }
@@ -156,6 +260,72 @@ sub look {
     }
     seek(FH,$min,0);
     $min;
+}
+
+
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+
+
+
+
+
+package UniqueID::Coding::DLFirstMiddle;
+
+sub new {
+	my $class = shift;
+	$class = ref($class) if ref($class);
+
+	bless my $self = {}, $class;
+
+	return $self;
+}
+
+sub uid { 'c_firstmiddler' }
+sub display_name { "First Name Middle Initial Coding Analyzer" }
+sub describe {
+	my($link) = main::path_to_script();
+	return <<_EODESC;
+Decode
+<a href="http://www.highprogrammer.com/alan/numbers/dlfirstmiddle.html">name
+encoding</a> used by many states for driver's licenses.
+_EODESC
+#'
+}
+
+sub options
+{
+	return(
+		['Code', 'w', 'text', 3],
+	);
+}
+
+sub process
+{
+	my($self) = shift;
+	my(%params) = @_;
+	my($code) = $params{'w'};
+	my(%error_fields, $error_explain, $output);
+	
+	if(not defined $code or not length $code) {
+		$error_fields{'w'} .= "Please specify an encoded name.";
+	}
+
+	if((defined $error_explain and length $error_explain) or
+		scalar keys %error_fields){
+		return(\%error_fields, $error_explain, $output);
+	}
+
+	my $middle_init = main::dlfirstmiddle_middle_from_code($code);
+	my $first_name = main::dlfirstmiddle_first_from_code($code);
+
+	$output = 
+		main::format_key_value('First Name', $first_name).
+		main::format_key_value('Middle Initial', $middle_init);
+
+	return(\%error_fields, $error_explain, $output);
 }
 
 
@@ -922,6 +1092,9 @@ add_category(UniqueID::DriversLicense::WisconsinReverse->new());
 add_category(UniqueID::Coding::Soundex->new());
 add_category(UniqueID::DriversLicense::Illinois->new());
 add_category(UniqueID::DriversLicense::IllinoisReverse->new());
+add_category(UniqueID::Coding::DLFirstMiddle->new());
+
+
 
 main();
 exit;
