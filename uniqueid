@@ -497,6 +497,139 @@ sub process
 }
 
 
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+
+
+package UniqueID::DriversLicense::USShared;
+
+sub uid {
+	my $self = shift;
+	my $short = $self->state_short();
+	return "dl_".$short;
+}
+sub display_name {
+	my $self = shift;
+	my $long = $self->state_long();
+	return "$long Driver's License Calculator"
+}
+sub describe_more { "" }
+
+sub describe {
+	my $self = shift;
+	my($link) = main::path_to_script();
+	my $state = $self->state_long();
+	my $state_short = $self->state_short();
+	my $state_short_r = $state_short.'r';
+	my $describe_more = $self->describe_more();
+	return <<_EODESC;
+Calculate your $state Driver's License number from your
+information.
+<A HREF="http://www.highprogrammer.com/alan/numbers/dl_us_shared.html">How it works</A>.
+<A HREF="$link/dl_$state_short_r">Reverse analyze an exististing number</A>.
+$describe_more
+_EODESC
+}
+
+sub options
+{
+	return(
+		['Last Name', 'last', 'text', 40],
+		['First Name', 'first', 'text', 40],
+		['Middle Initial', 'middle', 'text', 1],
+		['Gender', 'gender', 'radio', ['M', 'F'] ],
+		['Date of Birth'],
+		[' Year', 'y', 'text', 4],
+		[' Month', 'm', 'text', 2],
+		[' Day', 'd', 'text', 2],
+	);
+}
+
+sub process
+{
+	my($self) = shift;
+	my(%params) = @_;
+	my($last) = $params{'last'};
+	my($first) = $params{'first'};
+	my($middle) = $params{'middle'};
+	my($gender) = uc($params{'gender'});
+	my($yy) = $params{'y'};
+	my($mm) = $params{'m'};
+	my($dd) = $params{'d'};
+	my(%error_fields, $error_explain, $output);
+
+	($error_explain, %error_fields) =
+		main::validate_options(\%params, [$self->options()]);
+
+	$yy -= 1900 if $yy >= 1900 and $yy < 2000;
+	$yy -= 2000 if $yy >= 2000 and $yy < 2100;
+
+	if($yy > 99 or $yy < 0) {
+		$error_fields{'y'} .= 'Please specify year of birth as a one or '.
+			'two digit number. '.
+			'For example, for 1975 specify "75", for 2006 specify "6".';
+	}
+	if($mm > 12 or $mm < 1) {
+		$error_fields{'m'} .= 'Please specify month of birth as a '.
+			'number from 1 to 12. '.
+			'For example, for January specify "1", for December specify "12".';
+	}
+	if($dd > 31 or $dd < 1) {
+		$error_fields{'d'} .= 'Please specify day of birth as a '.
+			'number from 1 to 31.';
+	}
+	if($gender ne 'M' and $gender ne 'F') {
+		$error_fields{'gender'} .= 'Please specify gender (M or F)';
+	}
+	
+	if((defined $error_explain and length $error_explain) or
+		scalar keys %error_fields){
+		return(\%error_fields, $error_explain, $output);
+	}
+
+	$middle = substr $middle, 0, 1;
+	my($YearTens, $YearOnes) = split(//,sprintf("%02d",$yy));
+
+	my $dl = $self->format_license(
+		main::soundex($last),
+		dlfirstmiddle_encode($first, $middle),
+		$YearTens, $YearOnes,
+		$self->month_day_gender($mm, $dd, $gender));
+	
+	$output = main::format_key_value("Driver's License Number", $dl).
+	$self->result_notes();
+	
+
+
+	return(\%error_fields, $error_explain, $output);
+}
+
+sub month_day_gender
+{
+	my $self = shift;
+	my($Month, $Day, $Gender) = @_;
+	my($DateNo);
+	$Gender = uc($Gender);
+
+	$DateNo = ($Month - 1) * $self->month_mult() + $Day;
+	if($Gender eq 'F') { $DateNo += $self->female_add(); }
+
+	$DateNo = sprintf("%03d",$DateNo);
+
+	return($DateNo);
+}
+
+
+sub dlfirstmiddle_encode
+{
+	my($FN, $MiddleInit) = @_;
+	return main::dlfirstmiddle_encode($FN, $MiddleInit);
+}
+
+
+
 
 
 
@@ -642,6 +775,44 @@ sub first_name
 
 
 
+################################################################################
+################################################################################
+################################################################################
+################################################################################
+
+
+package UniqueID::DriversLicense::Wisconsin;
+@UniqueID::DriversLicense::Wisconsin::ISA = ( "UniqueID::DriversLicense::USShared" );
+
+
+sub new {
+	my $class = shift;
+	$class = ref($class) if ref($class);
+
+	bless my $self = {}, $class;
+
+	return $self;
+}
+
+sub state_long { 'Wisconsin' }
+sub state_short { 'wi' }
+sub female_add { 500 }
+sub month_mult { 40 }
+sub format_license {
+	my $self = shift;
+	my($last_soundex, $first_middle_code,
+		$year_tens, $year_ones, $month_day_gender_code) = @_;
+	return $last_soundex.'-'.
+		$first_middle_code. $year_tens.'-'.$year_ones.
+		$month_day_gender_code.'-??';
+}
+sub result_notes {
+	"The last two digits cannot be determined.  They represent the ".
+	"number of people who have the exact same license number as you ".
+	"(excepting the last two digits), when you got your license." }
+
+
+
 
 
 ################################################################################
@@ -684,132 +855,10 @@ _EODESC
 
 
 
-################################################################################
-################################################################################
-################################################################################
-################################################################################
-
-
-package UniqueID::DriversLicense::Wisconsin;
 
 
 
-sub new {
-	my $class = shift;
-	$class = ref($class) if ref($class);
 
-	bless my $self = {}, $class;
-
-	return $self;
-}
-
-sub uid { 'dl_wi' }
-sub display_name { "Wisconsin Driver's License Calculator" }
-sub describe {
-	my($link) = main::path_to_script();
-	return <<_EODESC;
-Calculate your Wisconsin Driver's License number from your
-information.
-<A HREF="http://www.highprogrammer.com/alan/numbers/dl_wi/">How it works</A>.
-<A HREF="$link/dl_wir">Reverse analyze an exististing number</A>.
-_EODESC
-#'
-}
-
-sub options
-{
-	return(
-		['Last Name', 'last', 'text', 40],
-		['First Name', 'first', 'text', 40],
-		['Middle Initial', 'middle', 'text', 1],
-		['Gender', 'gender', 'radio', ['M', 'F'] ],
-		['Date of Birth'],
-		[' Year', 'y', 'text', 4],
-		[' Month', 'm', 'text', 2],
-		[' Day', 'd', 'text', 2],
-	);
-}
-
-sub process
-{
-	my($self) = shift;
-	my(%params) = @_;
-	my($last) = $params{'last'};
-	my($first) = $params{'first'};
-	my($middle) = $params{'middle'};
-	my($gender) = uc($params{'gender'});
-	my($yy) = $params{'y'};
-	my($mm) = $params{'m'};
-	my($dd) = $params{'d'};
-	my(%error_fields, $error_explain, $output);
-
-	($error_explain, %error_fields) =
-		main::validate_options(\%params, [$self->options()]);
-
-	$yy -= 1900 if $yy >= 1900 and $yy < 2000;
-	$yy -= 2000 if $yy >= 2000 and $yy < 2100;
-
-	if($yy > 99 or $yy < 0) {
-		$error_fields{'y'} .= 'Please specify year of birth as a one or '.
-			'two digit number. '.
-			'For example, for 1975 specify "75", for 2006 specify "6".';
-	}
-	if($mm > 12 or $mm < 1) {
-		$error_fields{'m'} .= 'Please specify month of birth as a '.
-			'number from 1 to 12. '.
-			'For example, for January specify "1", for December specify "12".';
-	}
-	if($dd > 31 or $dd < 1) {
-		$error_fields{'d'} .= 'Please specify day of birth as a '.
-			'number from 1 to 31.';
-	}
-	if($gender ne 'M' and $gender ne 'F') {
-		$error_fields{'gender'} .= 'Please specify gender (M or F)';
-	}
-	
-	if((defined $error_explain and length $error_explain) or
-		scalar keys %error_fields){
-		return(\%error_fields, $error_explain, $output);
-	}
-
-	$middle = substr $middle, 0, 1;
-	my($YearTens, $YearOnes) = split(//,sprintf("%02d",$yy));
-
-	my $dl = main::soundex($last).'-'.
-		dlfirstmiddle_encode($first, $middle).
-		$YearTens.'-'.$YearOnes.
-		month_day_gender($mm, $dd, $gender).'-??';
-	
-	$output = main::format_key_value("Driver's License Number", $dl).
-	"The last two digits cannot be determined.  They represent the ".
-	"number of people who have the exact same license number as you ".
-	"(excepting the last two digits), when you got your license.";
-	
-
-
-	return(\%error_fields, $error_explain, $output);
-}
-
-sub month_day_gender
-{
-	my($Month, $Day, $Gender) = @_;
-	my($DateNo);
-	$Gender = uc($Gender);
-
-	$DateNo = ($Month - 1) * 40 + $Day;
-	if($Gender eq 'F') { $DateNo += 500; }
-
-	$DateNo = sprintf("%03d",$DateNo);
-
-	return($DateNo);
-}
-
-
-sub dlfirstmiddle_encode
-{
-	my($FN, $MiddleInit) = @_;
-	return main::dlfirstmiddle_encode($FN, $MiddleInit);
-}
 
 
 
@@ -826,7 +875,7 @@ sub dlfirstmiddle_encode
 
 
 package UniqueID::DriversLicense::Illinois;
-
+@UniqueID::DriversLicense::Illinois::ISA = ( "UniqueID::DriversLicense::USShared" );
 
 
 sub new {
@@ -838,104 +887,30 @@ sub new {
 	return $self;
 }
 
-sub uid { 'dl_il' }
-sub display_name { "Illinois Driver's License Calculator" }
-sub describe {
-	my($link) = main::path_to_script();
-	return <<_EODESC;
-Calculate your Illinois Driver's License number from your
-information.
-<STRONG>This is a work in progress and is not yet complete.</STRONG>
-<A HREF="http://www.highprogrammer.com/alan/numbers/dl_il/">How it works</A>.
-<A HREF="$link/dl_ilr">Reverse analyze an exististing number</A>.
-_EODESC
-#'
+sub state_long { 'Illinois' }
+sub state_short { 'il' }
+sub female_add { 600 }
+sub month_mult { 31 }
+sub format_license {
+	my $self = shift;
+	my($last_soundex, $first_middle_code,
+		$year_tens, $year_ones, $month_day_gender_code) = @_;
+	return $last_soundex.'-'.
+		$first_middle_code. $year_tens.'-'.$year_ones.
+		$month_day_gender_code;
+}
+sub result_notes { "" }
+sub describe_more { "<strong>This is a work in progress and not yet complete.</strong>" }
+
+sub new {
+	my $class = shift;
+	$class = ref($class) if ref($class);
+
+	bless my $self = {}, $class;
+
+	return $self;
 }
 
-sub options
-{
-	return(
-		['Last Name', 'last', 'text', 40],
-		['First Name', 'first', 'text', 40],
-		['Middle Initial', 'middle', 'text', 1],
-		['Gender', 'gender', 'radio', ['M', 'F'] ],
-		['Date of Birth'],
-		[' Year', 'y', 'text', 4],
-		[' Month', 'm', 'text', 2],
-		[' Day', 'd', 'text', 2],
-	);
-}
-
-sub process
-{
-	my($self) = shift;
-	my(%params) = @_;
-	my($last) = $params{'last'};
-	my($first) = $params{'first'};
-	my($middle) = $params{'middle'};
-	my($gender) = uc($params{'gender'});
-	my($yy) = $params{'y'};
-	my($mm) = $params{'m'};
-	my($dd) = $params{'d'};
-	my(%error_fields, $error_explain, $output);
-
-	($error_explain, %error_fields) =
-		main::validate_options(\%params, [$self->options()]);
-
-	$yy -= 1900 if $yy >= 1900 and $yy < 2000;
-	$yy -= 2000 if $yy >= 2000 and $yy < 2100;
-
-	if($yy > 99 or $yy < 0) {
-		$error_fields{'y'} .= 'Please specify year of birth as a one or '.
-			'two digit number. '.
-			'For example, for 1975 specify "75", for 2006 specify "6".';
-	}
-	if($mm > 12 or $mm < 1) {
-		$error_fields{'m'} .= 'Please specify month of birth as a '.
-			'number from 1 to 12. '.
-			'For example, for January specify "1", for December specify "12".';
-	}
-	if($dd > 31 or $dd < 1) {
-		$error_fields{'d'} .= 'Please specify day of birth as a '.
-			'number from 1 to 31.';
-	}
-	if($gender ne 'M' and $gender ne 'F') {
-		$error_fields{'gender'} .= 'Please specify gender (M or F)';
-	}
-	
-	if((defined $error_explain and length $error_explain) or
-		scalar keys %error_fields){
-		return(\%error_fields, $error_explain, $output);
-	}
-
-	$middle = substr $middle, 0, 1;
-	my($YearTens, $YearOnes) = split(//,sprintf("%02d",$yy));
-
-	my $dl = main::soundex($last).'-'.
-		main::dlfirstmiddle_encode($first, $middle).
-		$YearTens.'-'.$YearOnes.
-		month_day_gender($mm, $dd, $gender);
-	
-	$output = main::format_key_value("Driver's License Number", $dl);
-	
-
-
-	return(\%error_fields, $error_explain, $output);
-}
-
-sub month_day_gender
-{
-	my($Month, $Day, $Gender) = @_;
-	my($DateNo);
-	$Gender = uc($Gender);
-
-	$DateNo = ($Month - 1) * 31 + $Day;
-	if($Gender eq 'F') { $DateNo += 600; }
-
-	$DateNo = sprintf("%03d",$DateNo);
-
-	return($DateNo);
-}
 
 
 
