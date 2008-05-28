@@ -2307,8 +2307,13 @@ sub build_name_encoding_table {
 package UniqueID::DriversLicense::Minnesota;
 @UniqueID::DriversLicense::Minnesota::ISA = ( "UniqueID::DriversLicense::USSharedMDMIMN" );
 
-sub state_long { 'Minnesota' }
+sub state_long { 'Minnesota (pre-2005)' }
 sub state_short { 'mn' }
+sub describe_more { 
+	return UniqueID::DriversLicense::USSharedMDMIMN::describe_more().
+		"<p><STRONG>This algorithm is known to not work!</strong></p>".
+		"<p>This algorithm only works for license numbers prior to December 13, 2004.</p>";
+	}
 
 
 
