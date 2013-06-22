@@ -1349,10 +1349,13 @@ sub format_license {
 		$year_tens, $year_ones, $month_day_gender_code) = @_;
 	return $last_soundex.'-'.
 		$first_middle_code. '-'. $year_tens.$year_ones. '-'.
-		$month_day_gender_code;
+		$month_day_gender_code . '-?';
 }
-sub result_notes { "" }
-sub describe_more { main::html_betaware(); }
+sub result_notes {
+	"The last digit cannot be determined.  They represent the ".
+	"number of people who have the exact same license number as you ".
+	"(excepting the last digit) when you got your license." }
+#sub describe_more { main::html_betaware(); }
 
 
 

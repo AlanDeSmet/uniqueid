@@ -1,3 +1,9 @@
+- Your generator has an error on the checksum portion for washington state.
+  I'm guessing when you do the mod(10) that it translates a negative number to
+  0. Because when I did the calculations myself, the checksum came out to -6,
+  and 6 is the number that is on my license place. Your code generated a 0 for
+  the checksum.
+
 - Wisconsin: Number to right of photograph.  What is it?
 
 - Allow each algorithm to implement describe_params?
