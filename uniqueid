@@ -1521,7 +1521,9 @@ sub add_checksum {
 	foreach my $c (@a) {
 		$c = $self->letter_to_digit($c);
 	}
-	$orig[10] = ($a[1] - $a[2] + $a[3] - $a[4] + $a[5] - $a[6] + $a[7] - $a[8] + $a[9] - $a[11] + $a[12]) % 10;
+	my $tmp = $a[1] - $a[2] + $a[3] - $a[4] + $a[5] - $a[6] + $a[7] - $a[8] + $a[9] - $a[11] + $a[12];
+	if($tmp < 0) { $tmp = -$tmp; }
+	$orig[10] = $tmp % 10;
 	return join '', @orig;
 
 }
